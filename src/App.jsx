@@ -2,8 +2,8 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import Chart from './components/Chart.jsx';
 import StatsPanel from './components/StatsPanel.jsx';
-import { useBinanceKlines } from './hooks/useBinanceKlines.js';
-import { useFirebaseData } from './hooks/useFirebaseData.js';
+import { useBinanceKlines } from './hooks/useBinanceKlines';
+import { useFirebaseData }  from './hooks/useFirebaseData';
 import './App.css';
 
 // конвертируем строку вида "2025-07-24 15:46:58.584000" в unix-секунды
