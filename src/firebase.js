@@ -1,10 +1,6 @@
-// src/firebase.js
-
-// 1) Импортируем функции из Firebase JS SDK
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 
-// 2) Конфигурацию берем из переменных окружения
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -15,6 +11,21 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// 3) Инициализируем приложение и экспортируем референс на базу
+// Логи для продакшна (можешь удалить позже):
+if (import.meta.env.PROD) {
+  console.log('[firebaseConfig PROD]', firebaseConfig);
+}
+
+if (
+  !firebaseConfig.databaseURL ||
+  !firebaseConfig.databaseURL.startsWith('https://')
+) {
+  throw new Error(
+    `Wrong or missing VITE_FIREBASE_DATABASE_URL: "${firebaseConfig.databaseURL}".`
+  );
+}
+
 const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app);
+
+// ВАЖНО: передаём URL явно, чтобы SDK не пытался «догадаться»:
+export const db = getDatabase(app, firebaseConfig.databaseURL);
