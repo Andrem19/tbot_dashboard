@@ -2,13 +2,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// если у вас ещё есть другие плагины — импортируйте их аналогично
-
-export default defineConfig({
-  base: command === 'build' ? '/tbot_dashboard/' : '/',    // если вы всё же хостите на USERNAME.github.io/REPO
-  plugins: [react()],
-  // при необходимости ваши дополнительные опции:
-  // build: { outDir: 'dist', ... },
-  // server: { port: 3000, ... },
+// https://vitejs.dev/config/
+export default defineConfig(({ command, mode }) => {
+  return {
+    // когда вы делаете `npm run build`, command === 'build'
+    // и тогда базовый путь (base) будет указывать на ваш репо,
+    // а в режиме dev — на корень '/'
+    base: command === 'build' ? '/tbot_dashboard/' : '/',
+    plugins: [ react() ],
+    // остальные ваши опции, если нужны
+  };
 });
-
