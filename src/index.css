@@ -226,14 +226,12 @@ a {
   padding: 0 4px;
   border-radius: 3px;
 }
-.flash-val.flash      { transform: scale(1.15); }
-
+.flash-val.flash {
+  transform: scale(1.15);
+}
 /* фон по направлению */
-.flash-val.up         { background: rgba(0, 255, 0, 0.15); }
-.flash-val.down       { background: rgba(255, 0, 0, 0.15); }
-
-/* <── новая мгновенная красная подсветка ──> */
-.flash-val.flash-red  { background: rgba(33, 177, 196, 0.35) !important; }
+.flash-val.up   { background: rgba(0, 255,   0, 0.15); }
+.flash-val.down { background: rgba(255, 0,   0, 0.15); }
 
 /* Mobile: панель снизу */
 @media (max-width: 768px) {
