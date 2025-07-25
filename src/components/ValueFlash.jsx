@@ -1,24 +1,38 @@
-// src/components/ValueFlash.jsx
 import { useEffect, useRef, useState } from 'react';
 
+/**
+ * Отображает число, которое «подпрыгивает» и
+ * на 0.3 сек подсвечивается красным при обновлении.
+ */
 export default function ValueFlash({
   value,
   formatter = (v) => (v == null ? '-' : v),
-  duration = 500,
+  duration = 500,            // время «подпрыгивания»
+  highlightMs = 300,         // время красной подсветки
 }) {
-  const [flash, setFlash] = useState(false);
   const prevRef = useRef(value);
 
+  const [flash, setFlash] = useState(false);        // масштаб
+  const [red, setRed] = useState(false);            // красный фон
+
+  /* ---------- реакция на изменение значения ---------- */
   useEffect(() => {
     if (prevRef.current !== value) {
       setFlash(true);
-      const t = setTimeout(() => setFlash(false), duration);
-      prevRef.current = value;
-      return () => clearTimeout(t);
-    }
-  }, [value, duration]);
+      setRed(true);
 
-  // Направление изменения – позволит менять цвет
+      const t1 = setTimeout(() => setFlash(false), duration);
+      const t2 = setTimeout(() => setRed(false), highlightMs);
+
+      prevRef.current = value;
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    }
+  }, [value, duration, highlightMs]);
+
+  /* ---------- направление изменения ---------- */
   const dir =
     prevRef.current == null || value == null
       ? 'none'
@@ -29,7 +43,7 @@ export default function ValueFlash({
       : 'none';
 
   return (
-    <span className={`flash-val ${flash ? 'flash' : ''} ${dir}`}>
+    <span className={`flash-val ${flash ? 'flash' : ''} ${red ? 'flash-red' : ''} ${dir}`}>
       {formatter(value)}
     </span>
   );

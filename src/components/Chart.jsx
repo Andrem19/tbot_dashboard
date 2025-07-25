@@ -22,6 +22,7 @@ export default function Chart({
   tp,
   openTime,
   showExtras,
+  qty,
 }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
@@ -183,7 +184,7 @@ export default function Chart({
       });
     };
 
-    createOrUpdateLine(entryLineRef, entryPx, '#3498db', 'Entry');
+    createOrUpdateLine(entryLineRef, entryPx, '#3498db', `Entry ${qty}`);
     createOrUpdateLine(slLineRef, sl, '#e74c3c', 'SL');
     createOrUpdateLine(tpLineRef, tp, '#2ecc71', 'TP');
   }, [entryPx, sl, tp, showExtras]);
