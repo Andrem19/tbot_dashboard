@@ -203,21 +203,6 @@ export default function App() {
         </label>
         <button type="submit">Load</button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span>Position:</span>
-          <span
-            style={{
-              display: 'inline-block',
-              width: 12,
-              height: 12,
-              borderRadius: '50%',
-              background: parsed?.positionExists ? '#00cc66' : '#cc0033',
-            }}
-            title={
-              parsed?.positionExists ? 'Есть активная позиция' : 'Позиции нет'
-            }
-          />
-        </div>
       </form>
 
       {/* ── ГЛАВНЫЙ БЛОК ──────────────────────────────────── */}
