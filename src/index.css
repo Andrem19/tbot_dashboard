@@ -233,7 +233,7 @@ a {
 .flash-val.down       { background: rgba(255, 0, 0, 0.15); }
 
 /* <── новая мгновенная красная подсветка ──> */
-.flash-val.flash-red  { background: rgba(255, 0, 0, 0.35) !important; }
+.flash-val.flash-red  { background: rgba(33, 177, 196, 0.35) !important; }
 
 /* Mobile: панель снизу */
 @media (max-width: 768px) {
