@@ -227,8 +227,9 @@ a {
   border-radius: 3px;
 }
 .flash-val.flash {
-  transform: scale(1.15);
+  transform: scale(1.15);         /* «подпрыгивание» */
 }
+
 /* фон по направлению */
 .flash-val.up   { background: rgba(0, 255,   0, 0.15); }
 .flash-val.down { background: rgba(255, 0,   0, 0.15); }
