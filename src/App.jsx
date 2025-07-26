@@ -264,7 +264,7 @@ export default function App() {
               </tr>
               <tr>
                 <td>Avg Price</td>
-                <td>{Number(parsed.optionInfo.avgPrice).toFixed(2)}</td>
+                <td>{Number(parsed.optionInfo.avgPrice).toFixed(2)} ({Number(parsed.optionInfo.avgPrice*parsed.optionInfo.contracts).toFixed(2)})</td>
               </tr>
               <tr>
                 <td>Mark Price</td>
