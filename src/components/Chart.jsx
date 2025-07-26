@@ -184,7 +184,7 @@ export default function Chart({
       });
     };
 
-    createOrUpdateLine(entryLineRef, entryPx, '#3498db', `Entry ${qty}`);
+    createOrUpdateLine(entryLineRef, entryPx, '#3498db', `${qty}`);
     createOrUpdateLine(slLineRef, sl, '#e74c3c', 'SL');
     createOrUpdateLine(tpLineRef, tp, '#2ecc71', 'TP');
   }, [entryPx, sl, tp, showExtras]);
