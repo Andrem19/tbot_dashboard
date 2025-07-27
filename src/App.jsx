@@ -4,6 +4,7 @@ import StatsPanel from './components/StatsPanel.jsx';
 import { useBinanceKlines, useFirebaseData } from './hooks';
 import './App.css';
 
+/* ---------- утилиты ---------- */
 function toUnixSeconds(str) {
   if (!str || typeof str !== 'string') return null;
   const m = str.match(
@@ -22,6 +23,34 @@ const DEFAULT_SETTINGS = {
   interv: 60,
 };
 
+// Допустимые интервалы Binance в минутах
+const ALLOWED_MINUTES = [
+  1, 3, 5, 15, 30, 60, 120, 240, 360, 480, 720, 1440, 4320, 10080, 43200,
+];
+
+function normalizeCoin(input) {
+  const v = (input || '').toString().trim().toUpperCase();
+  return v || DEFAULT_SETTINGS.coin;
+}
+function normalizeLimit(input) {
+  const n = Math.floor(Number(input));
+  if (!Number.isFinite(n)) return DEFAULT_SETTINGS.number_candles;
+  return Math.min(1500, Math.max(1, n));
+}
+function normalizeInterv(input) {
+  const n = Math.floor(Number(input));
+  if (!Number.isFinite(n)) return DEFAULT_SETTINGS.interv;
+  if (ALLOWED_MINUTES.includes(n)) return n;
+  // выбираем ближайший допустимый
+  let best = ALLOWED_MINUTES[0];
+  let bestDiff = Math.abs(n - best);
+  for (const m of ALLOWED_MINUTES) {
+    const d = Math.abs(n - m);
+    if (d < bestDiff) { best = m; bestDiff = d; }
+  }
+  return best;
+}
+
 function deriveSpotSymbol(optionSymbol) {
   if (!optionSymbol || typeof optionSymbol !== 'string') return null;
   const parts = optionSymbol.split('-');
@@ -33,6 +62,7 @@ function deriveSpotSymbol(optionSymbol) {
   return null;
 }
 
+/* ---------- компонент приложения ---------- */
 export default function App() {
   const { data: realtimeData, connected: dbConnected } = useFirebaseData('dashboard');
 
@@ -42,7 +72,14 @@ export default function App() {
     return () => clearInterval(id);
   }, []);
 
-  const [form, setForm] = useState(DEFAULT_SETTINGS);
+  // form — строки для удобства контролируемых инпутов
+  const [form, setForm] = useState(() => ({
+    coin: DEFAULT_SETTINGS.coin,
+    number_candles: String(DEFAULT_SETTINGS.number_candles),
+    interv: String(DEFAULT_SETTINGS.interv),
+  }));
+
+  // settings — валидированные значения, которыми питается загрузчик/WS
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
 
   const {
@@ -56,36 +93,40 @@ export default function App() {
   useEffect(() => {
     if (!realtimeData?.state?.position_1?.long_leg?.info?.symbol) return;
     if (autoAppliedRef.current) return;
-
     const autoCoin = deriveSpotSymbol(realtimeData.state.position_1.long_leg.info.symbol);
     if (autoCoin) {
       autoAppliedRef.current = true;
-      const newSettings = { coin: autoCoin, number_candles: 48, interv: 60 };
-      setForm(newSettings);
-      setSettings(newSettings);
+      // в форму кладём строки
+      const formVals = { coin: autoCoin, number_candles: String(48), interv: String(60) };
+      setForm(formVals);
+      // в настройки — числа
+      setSettings({ coin: autoCoin, number_candles: 48, interv: 60 });
     }
   }, [realtimeData]);
 
   /* ---------- форма ---------- */
   const onChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => {
-      if (name === 'number_candles' || name === 'interv') {
-        return { ...prev, [name]: value === '' ? '' : Number(value) };
-      }
-      return { ...prev, [name]: value.toUpperCase() };
-    });
+    setForm((prev) => ({
+      ...prev,
+      [name]: name === 'coin' ? value.toUpperCase() : value,
+    }));
   };
 
   const onSubmit = useCallback(
     (e) => {
       e.preventDefault();
-      setSettings({
-        coin: (form.coin ?? '').trim().toUpperCase() || DEFAULT_SETTINGS.coin,
-        number_candles:
-          Number(form.number_candles) || DEFAULT_SETTINGS.number_candles,
-        interv: Number(form.interv) || DEFAULT_SETTINGS.interv,
+      const next = {
+        coin: normalizeCoin(form.coin),
+        number_candles: normalizeLimit(form.number_candles),
+        interv: normalizeInterv(form.interv),
+      };
+      setForm({
+        coin: next.coin,
+        number_candles: String(next.number_candles),
+        interv: String(next.interv),
       });
+      setSettings(next);
     },
     [form]
   );
@@ -101,9 +142,12 @@ export default function App() {
 
     const entryPx =
       realtimeData?.state?.position_1?.position_info?.entryPx ?? null;
+
     const openTimeRaw = realtimeData?.state?.position_1?.open_time;
     const openTime = toUnixSeconds(openTimeRaw);
+
     const hoursToExp = realtimeData?.state?.position_1?.hours_to_exp ?? null;
+
     const lowerPerc = realtimeData?.params?.lower_perc;
     const upperPerc = realtimeData?.params?.upper_perc;
 
@@ -111,6 +155,7 @@ export default function App() {
     const tp = entryPx && upperPerc != null ? entryPx * (1 + upperPerc) : null;
 
     const qty = realtimeData?.state?.position_1?.position_info?.size;
+
     const longLeg = realtimeData?.state?.position_1?.long_leg;
     const optionInfo = {
       name: longLeg?.name,
@@ -125,12 +170,14 @@ export default function App() {
     const futPnl =
       realtimeData?.state?.position_1?.position_info?.unrealizedPnl ?? null;
     const optPnl = optionInfo.unrealisedPnl ?? null;
+
     const totalPnl =
       (futPnl ? Number(futPnl) : 0) + (optPnl ? Number(optPnl) : 0);
 
     let elapsedHours = 0;
     let totalHours = 0;
     let percentDone = 0;
+
     if (openTime && hoursToExp != null) {
       elapsedHours = Math.max(0, (nowSec - openTime) / 3600);
       totalHours = elapsedHours + Number(hoursToExp);
@@ -179,17 +226,19 @@ export default function App() {
             spellCheck="false"
           />
         </label>
+
         <label>
           Number candles:
           <input
             type="number"
             name="number_candles"
-            min={48}
-            max={1000}
+            min={1}
+            max={1500}
             value={form.number_candles}
             onChange={onChange}
           />
         </label>
+
         <label>
           Interval (minutes):
           <input
@@ -201,8 +250,8 @@ export default function App() {
             onChange={onChange}
           />
         </label>
-        <button type="submit">Load</button>
 
+        <button type="submit">Load</button>
       </form>
 
       {/* ── ГЛАВНЫЙ БЛОК ──────────────────────────────────── */}
@@ -264,7 +313,10 @@ export default function App() {
               </tr>
               <tr>
                 <td>Avg Price</td>
-                <td>{Number(parsed.optionInfo.avgPrice).toFixed(2)} ({Number(parsed.optionInfo.avgPrice*parsed.optionInfo.contracts).toFixed(2)})</td>
+                <td>
+                  {Number(parsed.optionInfo.avgPrice).toFixed(2)} (
+                  {Number(parsed.optionInfo.avgPrice * parsed.optionInfo.contracts).toFixed(2)})
+                </td>
               </tr>
               <tr>
                 <td>Mark Price</td>
@@ -281,8 +333,8 @@ export default function App() {
 
       {/* ── СТАТУСНАЯ СТРОКА ──────────────────────────────── */}
       <div className="status-bar">
-        <span>Chart WS: {klinesConnected ? 'Connected' : 'Disconnected'}</span>
-        <span>DB: {dbConnected ? 'Connected' : 'Disconnected'}</span>
+        <span>Chart&nbsp;WS:&nbsp;{klinesConnected ? 'Connected' : 'Disconnected'}</span>
+        <span>DB:&nbsp;{dbConnected ? 'Connected' : 'Disconnected'}</span>
         <span>
           Showing {candles.length} candles for {settings.coin} @ {settings.interv}m
         </span>

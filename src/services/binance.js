@@ -4,8 +4,11 @@ const FUTURES_BASE_URL = 'https://fapi.binance.com';
 const WS_BASE_URL = 'wss://fstream.binance.com/ws';
 
 export async function fetchKlines(coin, number_candles, intervMinutes) {
-  const intervalString = minutesToBinanceInterval(intervMinutes);
-  const endpoint = `/fapi/v1/klines?symbol=${coin.toUpperCase()}&interval=${intervalString}&limit=${number_candles}`;
+  const intervalString = minutesToBinanceInterval(Number(intervMinutes));
+  const limit = Math.min(1500, Math.max(1, Math.floor(Number(number_candles))));
+  const symbol = (coin || '').toUpperCase();
+
+  const endpoint = `/fapi/v1/klines?symbol=${symbol}&interval=${intervalString}&limit=${limit}`;
   const url = FUTURES_BASE_URL + endpoint;
 
   const res = await fetch(url);
@@ -23,8 +26,8 @@ export async function fetchKlines(coin, number_candles, intervMinutes) {
 }
 
 export function createKlineWebSocket(coin, intervMinutes, onKline) {
-  const intervalString = minutesToBinanceInterval(intervMinutes);
-  const stream = `${coin.toLowerCase()}@kline_${intervalString}`;
+  const intervalString = minutesToBinanceInterval(Number(intervMinutes));
+  const stream = `${(coin || '').toLowerCase()}@kline_${intervalString}`;
   const ws = new WebSocket(`${WS_BASE_URL}/${stream}`);
 
   ws.onmessage = (e) => {

@@ -1,3 +1,4 @@
+// ./src/hooks/useBinanceKlines.js
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchKlines, createKlineWebSocket } from '../services/binance';
 
@@ -12,26 +13,36 @@ export function useBinanceKlines(settings) {
   const [loading, setLoading] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
 
-  const wsRef          = useRef(null);
-  const reconnectRef   = useRef(null);   // id тайм‑аутов
-  const closedManual   = useRef(false);  // чтобы не переподключаться при размонтировании
+  const wsRef        = useRef(null);
+  const reconnectRef = useRef(null);   // id тайм‑аута на переподключение
+  const closedManual = useRef(false);  // чтобы не переподключаться при размонтировании
 
   /* ---------- начальная загрузка ---------- */
-  const loadInitial = useCallback(async () => {
+  const loadInitial = useCallback(async (signal) => {
+    // signal — AbortSignal; если signal.aborted === true, отменяем побочные эффекты
     setLoading(true);
     try {
       const data = await fetchKlines(coin, number_candles, interv);
+      if (signal?.aborted) return;
       setCandles(data);
     } catch (e) {
-      console.error('Failed to fetch klines:', e);
+      if (!signal?.aborted) {
+        console.error('Failed to fetch klines:', e);
+        // при ошибке очищаем свечи, чтобы график корректно перерисовался
+        setCandles([]);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [coin, number_candles, interv]);
 
   /* ---------- WebSocket & авто‑reconnect ---------- */
   const connectWS = useCallback(() => {
-    if (wsRef.current) wsRef.current.close();
+    // закрываем предыдущий сокет
+    if (wsRef.current) {
+      try { wsRef.current.close(); } catch {}
+      wsRef.current = null;
+    }
 
     const ws = createKlineWebSocket(coin, interv, (candle) => {
       setCandles((prev) => {
@@ -68,25 +79,39 @@ export function useBinanceKlines(settings) {
       setWsConnected(false);
       scheduleReconnect();
     };
+
     ws.onerror = (err) => {
       console.error('WebSocket error', err);
-      ws.close();
+      try { ws.close(); } catch {}
     };
 
     wsRef.current = ws;
   }, [coin, interv]);
 
   /* ---------- эффекты ---------- */
-  useEffect(loadInitial, [loadInitial]);
 
+  // ВАЖНО: не передавать async‑функцию напрямую в useEffect.
+  // Запускаем загрузку внутри синхронного эффекта и используем AbortController.
+  useEffect(() => {
+    const ac = new AbortController();
+    loadInitial(ac.signal);
+    return () => ac.abort();
+  }, [loadInitial]);
+
+  // Подключение WS после загрузки initial (или при смене параметров)
   useEffect(() => {
     closedManual.current = false;
 
+    // пересоздаём сокет только когда initial уже не грузится
     if (!loading) connectWS();
+
     return () => {
       closedManual.current = true;
-      if (wsRef.current) wsRef.current.close();
-      if (reconnectRef.current) clearTimeout(reconnectRef.current);
+      try { wsRef.current?.close(); } catch {}
+      if (reconnectRef.current) {
+        clearTimeout(reconnectRef.current);
+        reconnectRef.current = null;
+      }
     };
   }, [loading, connectWS]);
 

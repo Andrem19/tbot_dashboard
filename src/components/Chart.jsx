@@ -1,4 +1,3 @@
-// src/components/Chart.jsx
 import { useEffect, useRef } from 'react';
 import {
   createChart,
@@ -14,6 +13,7 @@ import {
  *  tp?: number
  *  openTime?: number   // UNIX seconds
  *  showExtras?: boolean
+ *  qty?: number
  */
 export default function Chart({
   candles,
@@ -29,23 +29,25 @@ export default function Chart({
   const seriesRef = useRef(null);
   const roRef = useRef(null);
 
-  // refs для горизонтальных линий
   const entryLineRef = useRef(null);
   const slLineRef = useRef(null);
   const tpLineRef = useRef(null);
 
-  // маркеры
   const prevMarkersRef = useRef([]);
-
-  // флаги для обновлений
   const didInitialFitRef = useRef(false);
   const lastSetDataLenRef = useRef(0);
   const userAtRightEdgeRef = useRef(true);
 
-  // === Создание графика ===
+  // Рефы, по которым определяем: это продолжение того же ряда данных
+  // или полностью новый набор (другая длина/символ/интервал/сдвиг по времени).
+  const prevFirstTimeRef = useRef(null);
+  const prevLastTimeRef = useRef(null);
+
+  /* ---------- инициализация графика ---------- */
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+
     if (container.clientHeight === 0) container.style.height = '320px';
 
     const chart = createChart(container, {
@@ -96,7 +98,6 @@ export default function Chart({
     chartRef.current = chart;
     seriesRef.current = series;
 
-    // Resize observer
     roRef.current = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
       if (width > 0 && height > 0) {
@@ -113,7 +114,7 @@ export default function Chart({
     };
   }, []);
 
-  // === Установка/обновление свечей ===
+  /* ---------- подстановка свечей ---------- */
   useEffect(() => {
     if (!seriesRef.current || candles.length === 0) return;
 
@@ -125,33 +126,47 @@ export default function Chart({
       close: c.close,
     }));
 
-    if (!didInitialFitRef.current) {
+    const firstTime = data[0]?.time ?? null;
+    const lastTime = data[data.length - 1]?.time ?? null;
+
+    const needFullReset =
+      !didInitialFitRef.current ||                        // первый рендер
+      prevFirstTimeRef.current == null ||                 // нет предыдущего состояния
+      prevFirstTimeRef.current !== firstTime ||           // изменилась первая свеча -> новый набор
+      data.length < lastSetDataLenRef.current;            // длина стала меньше -> новый набор
+
+    if (needFullReset) {
       seriesRef.current.setData(data);
       chartRef.current?.timeScale().fitContent();
+
       didInitialFitRef.current = true;
       lastSetDataLenRef.current = data.length;
+      prevFirstTimeRef.current = firstTime;
+      prevLastTimeRef.current = lastTime;
       return;
     }
 
+    // Инкрементально: обновляем последний бар или добавляем новые.
     if (data.length > lastSetDataLenRef.current) {
       const newBars = data.slice(lastSetDataLenRef.current);
       newBars.forEach((bar) => seriesRef.current.update(bar));
       lastSetDataLenRef.current = data.length;
     } else {
       const lastBar = data[data.length - 1];
-      seriesRef.current.update(lastBar);
+      if (lastBar) seriesRef.current.update(lastBar);
     }
+
+    prevLastTimeRef.current = lastTime;
 
     if (userAtRightEdgeRef.current) {
       chartRef.current?.timeScale().scrollToRealTime();
     }
   }, [candles]);
 
-  // === Горизонтальные линии (Entry, SL, TP) ===
+  /* ---------- линии Entry/SL/TP ---------- */
   useEffect(() => {
     if (!seriesRef.current) return;
 
-    // если не нужно показывать дополнительные линии — удаляем
     if (!showExtras) {
       [entryLineRef, slLineRef, tpLineRef].forEach((r) => {
         if (r.current) {
@@ -184,16 +199,15 @@ export default function Chart({
       });
     };
 
-    createOrUpdateLine(entryLineRef, entryPx, '#3498db', `${qty}`);
+    createOrUpdateLine(entryLineRef, entryPx, '#3498db', qty != null ? String(qty) : 'Entry');
     createOrUpdateLine(slLineRef, sl, '#e74c3c', 'SL');
     createOrUpdateLine(tpLineRef, tp, '#2ecc71', 'TP');
-  }, [entryPx, sl, tp, showExtras]);
+  }, [entryPx, sl, tp, showExtras, qty]);
 
-  // === Маркер входа (openTime) ===
+  /* ---------- маркер времени открытия ---------- */
   useEffect(() => {
     if (!seriesRef.current) return;
 
-    // чистим маркеры, если не нужно
     if (!showExtras || !openTime) {
       if (prevMarkersRef.current.length) {
         seriesRef.current.setMarkers([]);
@@ -201,12 +215,9 @@ export default function Chart({
       }
       return;
     }
-
     if (!candles.length) return;
 
     const times = candles.map((c) => c.time);
-
-    // найдём ближайший таймстамп свечи к openTime
     let closestTime = times[0];
     let minDiff = Math.abs(openTime - closestTime);
     for (let i = 1; i < times.length; i++) {
@@ -216,15 +227,13 @@ export default function Chart({
         closestTime = times[i];
       }
     }
-
     const marker = {
       time: closestTime,
-      position: 'aboveBar', // можно belowBar / inBar
+      position: 'aboveBar',
       color: '#ffffff',
-      shape: 'arrowDown', // 'circle', 'square', 'arrowUp', 'arrowDown'
+      shape: 'arrowDown',
       text: 'Open',
     };
-
     seriesRef.current.setMarkers([marker]);
     prevMarkersRef.current = [marker];
   }, [openTime, candles, showExtras]);
