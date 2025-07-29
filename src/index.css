@@ -244,6 +244,41 @@ a {
     border-left: none;
     border-top: 1px solid #333;
   }
+  .form-row {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  /* каждая «пара» описание‑поле занимает половину ширины,
+     чтобы влезать по две в строку */
+  .form-row label {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+    font-size: 11px;
+  }
+
+  .form-row input,
+  .form-row select {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  /* чек‑боксы идут компактно, по содержимому */
+  .form-row label.checkbox {
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    min-width: unset;
+  }
+
+  /* кнопка растягивается на всю ширину отдельной строки */
+  .form-row button {
+    flex: 1 1 100%;
+    margin-top: 2px;
+    padding: 10px 0;
+  }
 }
 
 .progress-fill-static {
