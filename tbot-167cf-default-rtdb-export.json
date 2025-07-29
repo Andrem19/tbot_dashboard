@@ -1,73 +1,82 @@
 {
   "dashboard": {
     "exist": true,
-    "params": {
-      "base_amount": 1,
-      "fut_type": "Buy",
-      "lower_perc": 0.05708054048303006,
-      "upper_perc": 0.040004255771890686
-    },
-    "state": {
-      "position_1": {
+    "stages": {
+      "first": {
+        "amount": 1,
         "exist": true,
-        "long_leg": {
-          "contracts": 1,
-          "contracts_plan": 0,
+        "expect": 0.04,
+        "lower_perc": 0.05867211492987087,
+        "over_strike": 0.025,
+        "position": {
           "exist": true,
-          "info": {
-            "adlRankIndicator": 0,
-            "autoAddMargin": 0,
-            "avgPrice": "0.32",
-            "bustPrice": "",
-            "createdTime": "1753368412002",
-            "cumRealisedPnl": "",
-            "curRealisedPnl": "-0.0224",
-            "delta": "-0.19394984",
-            "gamma": "0.02775102",
-            "isReduceOnly": false,
-            "leverage": "",
-            "leverageSysUpdatedTime": "",
-            "liqPrice": "",
-            "markPrice": "0.66871579",
-            "mmrSysUpdatedTime": "",
-            "positionBalance": "",
-            "positionIM": "0",
-            "positionIMByMp": "",
-            "positionIdx": 0,
-            "positionMM": "0",
-            "positionMMByMp": "",
-            "positionStatus": "Normal",
-            "positionValue": "0.66871579",
-            "riskId": 0,
-            "riskLimitValue": "",
-            "seq": 11183648551,
-            "sessionAvgPrice": "",
-            "side": "Buy",
-            "size": "1",
-            "stopLoss": "",
-            "symbol": "SOL-25JUL25-179-P-USDT",
-            "takeProfit": "",
-            "theta": "-0.84256271",
-            "tpslMode": "Full",
-            "tradeMode": 0,
-            "trailingStop": "",
-            "unrealisedPnl": -0.13,
-            "updatedTime": "1753368412004",
-            "used_bid": 0.19,
-            "vega": "0.02084060"
+          "leg": {
+            "contracts": 3,
+            "exist": true,
+            "info": {
+              "avgPrice": 0.39333333,
+              "curRealisedPnl": -0.0826,
+              "markPrice": 0.39874476,
+              "positionValue": 1.19623428,
+              "side": "Buy",
+              "size": 3,
+              "symbol": "SOL-30JUL25-175-P-USDT",
+              "unrealisedPnl": -0.6099999899999999,
+              "used_bid": 0.19
+            },
+            "name": "SOL-30JUL25-175-P-USDT",
+            "tp_id": "hedgeTP-6ddeae16a9ee400e8f"
           },
-          "name": "SOL-25JUL25-179-P-USDT"
+          "pnl_target": 1.084363049340261,
+          "position_info": {
+            "entryPx": 181.47,
+            "positionValue": 52.606,
+            "side": 1,
+            "size": 0.29,
+            "unrealizedPnl": -0.0203
+          }
         },
-        "pnl_target": 0,
-        "position_info": {
-          "entryPx": 187.98,
-          "positionValue": 31.7849,
-          "side": 1,
-          "size": 0.17,
-          "unrealizedPnl": -0.1717
-        }
+        "to_exp_init": 13.023577360833333,
+        "upper_perc": 0.029999999999999978
+      },
+      "second": {
+        "amount": 2,
+        "exist": true,
+        "expect": 0.06,
+        "lower_perc": 0.05951022071459339,
+        "over_strike": 0.025,
+        "position": {
+          "exist": true,
+          "leg": {
+            "contracts": 3,
+            "exist": true,
+            "info": {
+              "avgPrice": 0.39333333,
+              "curRealisedPnl": -0.0826,
+              "markPrice": 0.40010922,
+              "positionValue": 1.20032766,
+              "side": "Buy",
+              "size": 3,
+              "symbol": "SOL-30JUL25-175-P-USDT",
+              "unrealisedPnl": -0.6099999899999999,
+              "used_bid": 0.19
+            },
+            "name": "SOL-30JUL25-175-P-USDT",
+            "tp_id": "hedgeTP-579a9cbf7afc4fb986"
+          },
+          "pnl_target": 2.15747575382932,
+          "position_info": {
+            "entryPx": 181.5,
+            "positionValue": 105.212,
+            "side": 1,
+            "size": 0.58,
+            "unrealizedPnl": -0.058
+          }
+        },
+        "to_exp_init": 13.006785083055556,
+        "upper_perc": 0.030000000000000027
       }
     },
-    "time": "2025-07-24 18:08:21.039401"
+    "time": "2025-07-29 20:04:12.282652"
   }
 }
