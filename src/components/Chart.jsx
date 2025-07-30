@@ -93,7 +93,10 @@ export default function Chart({ candles, positions = [] }) {
       const add=(price,color,title)=>{
         if(price==null) return;
         const ln=series.createPriceLine({
-          price,color,lineWidth:1,lineStyle:LineStyle.Dashed,
+          price,
+          color,
+          lineWidth:2,
+          lineStyle:LineStyle.Dashed,
           axisLabelVisible:true,title,
         });
         linesRef.current.push(ln);

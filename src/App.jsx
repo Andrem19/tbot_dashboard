@@ -22,8 +22,8 @@ function deriveSpotSymbol(opt){if(!opt)return null;const p=opt.split('-');return
 
 /* ──── цвета линий ─────────────────────────────────────────── */
 const STAGE_COLORS={
-  first:{entry:'#0c1888ff',sl:'#e74c3c',tp:'#2ecc71'},
-  second:{entry:'#5b0663ff',sl:'#c0392b',tp:'#27ae60'},
+  first:{entry:'#5e6288ff',sl:'#e74c3c',tp:'#2ecc71'},
+  second:{entry:'#ffffffff',sl:'#c0392b',tp:'#27ae60'},
 };
 
 /* ──── таблица опционов ───────────────────────────────────── */
