@@ -2,18 +2,15 @@ import ValueFlash from './ValueFlash.jsx';
 
 /**
  * props:
- *   stages = {
- *     first:  { futPnl, optPnl, total },
- *     second: { futPnl, optPnl, total }
- *   }
+ *   stages = { first:{futPnl,optPnl,total}, second:{…} }
  *   totals = { fut, opt, total }
  */
 export default function StatsPanel({ stages = {}, totals = {} }) {
-  /* какие стадии реально есть */
-  const order = ['first', 'second'].filter((k) => stages[k]);
+  /* какие стадии действительно существуют */
+  const cols = ['first', 'second'].filter((k) => stages[k]);
 
-  /* набор строк таблицы */
-  const rows = [
+  /* строки‑метрики */
+  const metrics = [
     { label: 'Futures uPnL', key: 'futPnl' },
     { label: 'Options uPnL', key: 'optPnl' },
     { label: 'Total uPnL',   key: 'total'  },
@@ -25,33 +22,36 @@ export default function StatsPanel({ stages = {}, totals = {} }) {
         Positions&nbsp;
         <span
           className="pos-dot"
-          title={order.length ? 'Есть активная позиция' : 'Позиции нет'}
-          style={{ background: order.length ? '#00cc66' : '#cc0033' }}
+          title={cols.length ? 'Есть активная позиция' : 'Позиции нет'}
+          style={{ background: cols.length ? '#00cc66' : '#cc0033' }}
         />
       </h3>
 
-      {order.length > 0 ? (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+      {cols.length ? (
+        <table className="stats-table">
+          {/* фиксируем ширины колонок: 45% — метрика, остальное поровну на данные */}
+          <colgroup>
+            <col style={{ width: '45%' }} />
+            {cols.map(() => (
+              <col key={Math.random()} style={{ width: `${55 / cols.length}%` }} />
+            ))}
+          </colgroup>
+
           <thead>
             <tr>
-              <th style={{ textAlign: 'left' }}></th>
-              {order.map((k) => (
-                <th key={k} style={{ textTransform: 'capitalize', textAlign: 'right' }}>
-                  {k}
-                </th>
+              <th className="metric-cell"></th>
+              {cols.map((k) => (
+                <th key={k} className="data-cell">{k}</th>
               ))}
             </tr>
           </thead>
 
           <tbody>
-            {rows.map(({ label, key }) => (
-              <tr
-                key={key}
-                className={key === 'total' ? 'stats-row total' : 'stats-row'}
-              >
-                <td>{label}</td>
-                {order.map((k) => (
-                  <td key={k + key} style={{ textAlign: 'right' }}>
+            {metrics.map(({ label, key }) => (
+              <tr key={key}>
+                <td className="metric-cell">{label}</td>
+                {cols.map((k) => (
+                  <td key={k + key} className="data-cell">
                     <ValueFlash
                       value={stages[k][key]}
                       formatter={(v) => (v == null ? '-' : Number(v).toFixed(2))}
@@ -63,11 +63,10 @@ export default function StatsPanel({ stages = {}, totals = {} }) {
           </tbody>
         </table>
       ) : (
-        <div style={{ fontSize: 13, color: '#888' }}>No active positions</div>
+        <div style={{ fontSize: 12, color: '#888' }}>No active positions</div>
       )}
 
-      {/* общий итог по всем выбранным стадиям */}
-      <div className="stats-row total" style={{ marginTop: 8 }}>
+      <div className="stats-row total overall-row">
         <span>Overall Total uPnL:</span>
         <ValueFlash
           value={totals.total}

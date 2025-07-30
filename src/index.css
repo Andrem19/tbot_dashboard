@@ -361,3 +361,24 @@ a {
     overflow-x: hidden;
   }
 }
+
+/* ─── Таблица статистики ─────────────────────────────────── */
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 4px 4px;
+}
+
+.stats-table .metric-cell {
+  text-align: left;
+  color: #ccc;
+}
+
+.stats-table .data-cell {
+  text-align: right;
+}
