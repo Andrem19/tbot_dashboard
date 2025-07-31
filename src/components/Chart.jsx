@@ -10,7 +10,6 @@ export default function Chart({ candles, positions = [] }) {
   const containerRef   = useRef(null);
   const chartRef       = useRef(null);
   const seriesRef      = useRef(null);
-  const resizeObsRef   = useRef(null);
   const userAtRightRef = useRef(true);
   const didFitRef      = useRef(false);
   const lastLenRef     = useRef(0);
@@ -18,36 +17,32 @@ export default function Chart({ candles, positions = [] }) {
   const linesRef       = useRef([]);
   const markersRef     = useRef([]);
 
-  /* ─── ИНИЦИАЛИЗАЦИЯ ─────────────────────────────────────── */
+  /* ─── инициализация ─────────────────────────────────────── */
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
-    /* создаём график без width/height – зададим их сразу через resize() */
     const chart = createChart(el, {
-      layout: { background: { color: '#0f0f0f' }, textColor: '#d1d4dc' },
-      grid:   { vertLines: { color: '#2B2B43' }, horzLines: { color: '#2B2B43' } },
+      /** главное: авто-подгонка размеров без наших resize-циклов */
+      autoSize: true,
+
+      layout   : { background: { color: '#0f0f0f' }, textColor: '#d1d4dc' },
+      grid     : { vertLines : { color: '#2B2B43' }, horzLines: { color: '#2B2B43' } },
       crosshair: { mode: CrosshairMode.Normal },
       rightPriceScale: { borderVisible: false },
       timeScale: {
         borderVisible: false,
-        timeVisible: true,
-        rightOffset: 10,
-        barSpacing: 6,
+        timeVisible  : true,
+        rightOffset  : 10,
+        barSpacing   : 6,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
-      handleScale:  { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+      handleScale : { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
     });
 
-    /* первый размер – то, что фактически задано контейнеру медиа-правилами */
-    const { width, height } = el.getBoundingClientRect();
-    chart.resize(Math.max(50, width), Math.max(50, height || 260));
-
     const series = chart.addCandlestickSeries({
-      upColor:    '#26a69a',
-      downColor:  '#ef5350',
-      wickUpColor:'#26a69a',
-      wickDownColor:'#ef5350',
+      upColor:'#26a69a', downColor:'#ef5350',
+      wickUpColor:'#26a69a', wickDownColor:'#ef5350',
       borderVisible:false,
       priceFormat:{ type:'price', precision:2, minMove:0.01 },
     });
@@ -56,32 +51,26 @@ export default function Chart({ candles, positions = [] }) {
       userAtRightRef.current = chart.timeScale().scrollPosition() === 0;
     });
 
-    /* наблюдаем за реальным размером – меняем именно resize() */
-    resizeObsRef.current = new ResizeObserver(
-      ([{ contentRect:{ width:w, height:h } }]) => {
-        if (w && h) chart.resize(w, h);
-      },
-    );
-    resizeObsRef.current.observe(el);
-
     chartRef.current  = chart;
     seriesRef.current = series;
 
-    return () => {
-      resizeObsRef.current?.disconnect();
-      chart.remove();
-    };
+    return () => chart.remove();
   }, []);
 
-  /* ─── СВЕЧИ ─────────────────────────────────────────────── */
+  /* ─── свечи ─────────────────────────────────────────────── */
   useEffect(() => {
     const series = seriesRef.current;
     const chart  = chartRef.current;
     if (!series || candles.length === 0) return;
 
     const data = candles.map(c => ({
-      time: c.time, open: c.open, high: c.high, low: c.low, close: c.close,
+      time : c.time,
+      open : c.open,
+      high : c.high,
+      low  : c.low,
+      close: c.close,
     }));
+
     const first = data[0]?.time ?? null;
     const needReset =
       !didFitRef.current ||
@@ -105,7 +94,7 @@ export default function Chart({ candles, positions = [] }) {
     if (userAtRightRef.current) chart.timeScale().scrollToRealTime();
   }, [candles]);
 
-  /* ─── ЛИНИИ ЦЕН ─────────────────────────────────────────── */
+  /* ─── ценовые линии ─────────────────────────────────────── */
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
@@ -117,11 +106,15 @@ export default function Chart({ candles, positions = [] }) {
       if (!p.visible) return;
       const add = (price, color, title) => {
         if (price == null) return;
-        const ln = series.createPriceLine({
-          price, color, lineWidth:2, lineStyle:LineStyle.Dashed,
-          axisLabelVisible:true, title,
-        });
-        linesRef.current.push(ln);
+        linesRef.current.push(
+          series.createPriceLine({
+            price, color,
+            lineWidth: 2,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title,
+          }),
+        );
       };
       add(p.entryPx, p.colors.entry, `${p.key} ${p.qty ?? ''}`.trim());
       add(p.sl,      p.colors.sl,    `${p.key} SL`);
@@ -129,7 +122,7 @@ export default function Chart({ candles, positions = [] }) {
     });
   }, [positions]);
 
-  /* ─── МАРКЕРЫ ───────────────────────────────────────────── */
+  /* ─── маркеры открытия ─────────────────────────────────── */
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
@@ -151,8 +144,11 @@ export default function Chart({ candles, positions = [] }) {
       }
 
       markers.push({
-        time: closest, position:'aboveBar', color:p.colors.entry,
-        shape:'arrowDown', text:p.key,
+        time: closest,
+        position: 'aboveBar',
+        color: p.colors.entry,
+        shape: 'arrowDown',
+        text: p.key,
       });
     });
 
