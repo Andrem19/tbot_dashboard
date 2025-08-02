@@ -146,7 +146,7 @@ export default function Chart({ candles, positions = [] }) {
         position:'aboveBar',
         color:p.colors.entry,
         shape:'arrowDown',
-        text:p.key,
+        text:'',
       });
     });
 

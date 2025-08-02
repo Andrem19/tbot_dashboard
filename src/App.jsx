@@ -47,6 +47,7 @@ function OptionTable({ stages }) {
     {label:'Avg Price', key:'avgPrice', fmt:(v,inf)=>`${Number(v).toFixed(2)} (${Number(v*(inf.contracts||0)).toFixed(2)})`},
     {label:'Mark Price', key:'markPrice', fmt:v=>Number(v).toFixed(2)},
     {label:'Used Bid', key:'usedBid', fmt:v=>Number(v).toFixed(2)},
+    {label:'Max Size', key:'maxSize', fmt:v=>Number(v).toFixed(2)},
   ];
   if (!order.some(k => stages[k]?.optionInfo)) return null;
 
@@ -158,6 +159,7 @@ export default function App() {
           avgPrice       : obj.position.leg?.info?.avgPrice,
           markPrice      : obj.position.leg?.info?.markPrice,
           usedBid        : obj.position.leg?.info?.used_bid,
+          maxSize        : obj.position.leg?.info?.max_size,
         },
         colors  : STAGE_COLORS[k] || {},
         progress: { elapsed, remaining: h2e, percent },
