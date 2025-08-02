@@ -41,12 +41,19 @@ export function useBinanceKlines(settings) {
 
   /* ---------- функция подключения к WS (может вызываться повторно) ---------- */
   const connectWS = useCallback(() => {
-    // закрываем предыдущий сокет (если был)
+    // отменяем запланированный автоматический reconnect (если был)
+    if (reconnectRef.current) {
+      clearTimeout(reconnectRef.current);
+      reconnectRef.current = null;
+    }
+
+    // закрываем предыдущий сокет, если существовал
     if (wsRef.current) {
       try { wsRef.current.close(); } catch {}
       wsRef.current = null;
     }
 
+    // открываем новое соединение
     const ws = createKlineWebSocket(coin, interv, (candle) => {
       setCandles(prev => {
         if (prev.length === 0) return [candle];
@@ -62,7 +69,7 @@ export function useBinanceKlines(settings) {
 
     /* ---- обработка состояний ---- */
     ws.onopen = () => {
-      setWsConnected(true);
+      setWsConnected(true);            // соединение успешно открыто
       if (reconnectRef.current) {
         clearTimeout(reconnectRef.current);
         reconnectRef.current = null;
@@ -70,17 +77,16 @@ export function useBinanceKlines(settings) {
     };
 
     const scheduleReconnect = () => {
-      if (closedManual.current) return;        // размонтирование
-      if (reconnectRef.current) return;        // уже запланирован
+      if (closedManual.current || reconnectRef.current) return;
       reconnectRef.current = setTimeout(() => {
         reconnectRef.current = null;
-        connectWS();
+        connectWS();                   // пробуем снова
       }, 5_000);
     };
 
     ws.onclose = () => {
-      setWsConnected(false);
-      scheduleReconnect();
+      setWsConnected(false);           // потеряли соединение
+      scheduleReconnect();             // планируем автоматический reconnect
     };
 
     ws.onerror = (err) => {
@@ -90,6 +96,8 @@ export function useBinanceKlines(settings) {
 
     wsRef.current = ws;
   }, [coin, interv]);
+
+
 
   /* ---------- эффекты ---------- */
   useEffect(() => {

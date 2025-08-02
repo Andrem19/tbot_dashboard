@@ -289,7 +289,7 @@ export default function App() {
               onClick={reconnect}
               title="Reconnect WebSocket now"
               style={{
-                marginLeft: 4,
+                marginLeft: 6,
                 padding: '0 6px',
                 background: '#333',
                 color: '#fff',
@@ -304,9 +304,7 @@ export default function App() {
             </button>
           )}
         </span>
-
         <span>DB:&nbsp;{dbConnected ? 'Connected' : 'Disconnected'}</span>
-
         <span>{`Showing ${candles.length} candles for ${settings.coin} @ ${settings.interv}m`}</span>
       </div>
     </div>
