@@ -199,22 +199,24 @@ a {
 
 /* === Основной блок === */
 .main-content {
-  flex: 1;
+  /* было: display:flex row;  теперь — столбик */
   display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
   overflow: hidden;
+  min-height: 0;          /* чтобы ChartTabs мог сжиматься */
 }
+
 
 /* === Правая панель === */
 .stats-panel {
-  width: 240px;
-  min-width: 200px;
-  background: #1b1b1b;
-  border-left: 1px solid #333;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 13px;
+  /* сбрасываем «боковые» размеры и бордюр */
+  width: 100% !important;   /* на десктопе и мобилке на всю ширину */
+  max-width: none;
+  min-width: 0;
+  flex: 0 0 auto;           /* высота по содержимому */
+  border-left: none;
+  border-top: 1px solid #292929;   /* отделяем от графика сверху */
 }
 
 .stats-title {
@@ -311,9 +313,8 @@ a {
 @media (max-width: 768px) {
   /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */
   .main-content {
-    flex-direction: column;
-    overflow: visible;          /* ничего не режем */
-    height: auto;               /* не фиксируем высоту */
+    height: auto;
+    overflow: visible;
   }
 
   .stats-panel {
