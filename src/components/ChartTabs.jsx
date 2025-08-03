@@ -13,13 +13,16 @@ function ChartWithData({ symbol, number_candles, interv, positions, reportStatus
   }, [symbol, wsConnected, reconnect, candles.length, reportStatus]);
 
   /* ВАЖНО:   height убрали — высота берётся из CSS (45vh на mobile, flex:1 на desktop) */
-return (
-  <div className="chart-wrapper">
-    {loading && <div style={{ padding: 8 }}>Loading…</div>}
-    {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
-    {!!candles.length && <Chart candles={candles} positions={positions} />}
-  </div>
-);
+  return (
+    <div
+      className="chart-wrapper"
+      style={{ position: 'relative', width: '100%' }}
+    >
+      {loading && <div style={{ padding: 8 }}>Loading…</div>}
+      {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
+      {!!candles.length && <Chart candles={candles} positions={positions} />}
+    </div>
+  );
 }
 
 
