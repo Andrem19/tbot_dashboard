@@ -1,7 +1,6 @@
 /* === Базовая типографика и сброс === */
 html, body, #root {
   height: 100%;
-  width: 100%;
   margin: 0;
   padding: 0;
   background: #0f0f0f;
@@ -23,7 +22,6 @@ a {
 .app-container{
   overflow-x: hidden;
   overflow-y: auto;       /* вертикальный скролл на всём приложении          */
-  width: 100%;
 }
 
 /* === Форма === */
@@ -76,7 +74,7 @@ a {
 .chart-wrapper{
   /* было: height:100%  ― сбивало высоту, если родитель сам не фиксирован   */
   height: auto;
-  min-height: 550px;      /* safeguard, как и раньше                         */
+  min-height: 300px;      /* safeguard, как и раньше                         */
   width: 100%;
 }
 
@@ -208,7 +206,6 @@ a {
                              строку, когда 240 px целиком не помещается      */
   border-left: 1px solid #333;
   border-top: none;       /* на десктопе бордер сверху не нужен              */
-  background:#181818 !important;
 }
 
 .stats-title {
