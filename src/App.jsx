@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Chart from './components/Chart.jsx';
-import StatsPanel from './components/StatsPanel.jsx';
-import { useBinanceKlines, useFirebaseData } from './hooks';
+import ChartTabs    from './components/ChartTabs.jsx';
+import StatsPanel   from './components/StatsPanel.jsx';
+import { useFirebaseData } from './hooks';
 import './App.css';
 
-/* ──── вспомогательные функции ────────────────────────────── */
+/* ─── утилиты ─────────────────────────────────────────────── */
 function toUnixSeconds(str) {
   if (!str || typeof str !== 'string') return null;
   const m = str.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3,6}))?/);
@@ -13,10 +13,8 @@ function toUnixSeconds(str) {
   const ms = Number(msRaw.slice(0, 3));
   return Math.floor(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s, ms) / 1000);
 }
-
 const DEFAULT_SETTINGS = { coin: 'SOLUSDT', number_candles: 48, interv: 60 };
 const ALLOWED_MINUTES  = [1,3,5,15,30,60,120,240,360,480,720,1440,4320,10080,43200];
-
 function normalizeCoin(v){ const s=(v||'').toString().trim().toUpperCase(); return s || DEFAULT_SETTINGS.coin; }
 function normalizeLimit(v){ const n=Math.floor(Number(v)); return Number.isFinite(n) ? Math.min(1500, Math.max(1,n)) : DEFAULT_SETTINGS.number_candles; }
 function normalizeInterv(v){
@@ -29,15 +27,12 @@ function normalizeInterv(v){
   }
   return best;
 }
-function deriveSpotSymbol(opt){ if(!opt) return null; const p=opt.split('-'); return p.length>=2 ? (p[0]+p.at(-1)).toUpperCase() : null; }
-
-/* ──── цвета линий ─────────────────────────────────────────── */
+/* ─── цвета линий ─────────────────────────────────────────── */
 const STAGE_COLORS = {
   first : { entry:'#5e6288ff', sl:'#e74c3c', tp:'#2ecc71' },
   second: { entry:'#ffffffff', sl:'#c0392b', tp:'#27ae60' },
 };
-
-/* ──── таблица опционов (оставлена без изменений) ──────────── */
+/* ─── таблица опционов (без изменений) ────────────────────── */
 function OptionTable({ stages }) {
   const order = ['first','second'];
   const rows = [
@@ -50,7 +45,6 @@ function OptionTable({ stages }) {
     {label:'Max Size', key:'maxSize', fmt:v=>Number(v).toFixed(2)},
   ];
   if (!order.some(k => stages[k]?.optionInfo)) return null;
-
   return (
     <div className="option-table-wrapper">
       <table className="option-table">
@@ -75,10 +69,9 @@ function OptionTable({ stages }) {
     </div>
   );
 }
-
-/* ──── основной компонент приложения ───────────────────────── */
+/* ─── главный компонент ───────────────────────────────────── */
 export default function App() {
-  /* время-«heartbeat» */
+  /* heartbeat-таймер */
   const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
   useEffect(() => {
     const id = setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 60_000);
@@ -88,14 +81,13 @@ export default function App() {
   /* Firebase */
   const { data: dashboard, connected: dbConnected } = useFirebaseData('dashboard');
 
-  /* форма выбора параметров */
+  /* форма настроек */
   const [form, setForm] = useState({
     coin: DEFAULT_SETTINGS.coin,
     number_candles: String(DEFAULT_SETTINGS.number_candles),
     interv: String(DEFAULT_SETTINGS.interv),
   });
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-
   const onChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
   const onSubmit = useCallback(e => {
     e.preventDefault();
@@ -106,28 +98,10 @@ export default function App() {
     });
   }, [form]);
 
-  /* Binance: свечи + соединение + reconnect */
-  const { candles, loading, wsConnected, reconnect } = useBinanceKlines(settings);
-
-  /* чек-боксы видимости позиций */
+  /* чек-боксы видимости линий */
   const [visible, setVisible] = useState({ first:true, second:true });
 
-  /* авто-определение coin по данным dashboard */
-  const autoAppliedRef = useRef(false);
-  useEffect(() => {
-    if (autoAppliedRef.current || !dashboard?.stages) return;
-    for (const s of Object.values(dashboard.stages)) {
-      const spot = deriveSpotSymbol(s?.position?.leg?.info?.symbol);
-      if (spot) {
-        autoAppliedRef.current = true;
-        setForm(f => ({ ...f, coin: spot }));
-        setSettings(sg => ({ ...sg, coin: spot }));
-        break;
-      }
-    }
-  }, [dashboard]);
-
-  /* stages для графика и панели */
+  /* ---------- stages ---------- */
   const stages = useMemo(() => {
     const res = {}, st = dashboard?.stages || {};
     for (const [k, obj] of Object.entries(st)) {
@@ -137,15 +111,14 @@ export default function App() {
       const upper   = obj.upper_perc ?? null;
       const openUts = toUnixSeconds(obj.position.open_time);
       const h2e     = obj.position.leg?.hours_to_exp ?? null;
-
       let elapsed = 0, total = 0, percent = 0;
       if (openUts && h2e != null) {
         elapsed = Math.max(0, (nowSec - openUts) / 3600);
         total   = elapsed + Number(h2e);
         percent = total > 0 ? Math.min(100, Math.max(0, (elapsed / total) * 100)) : 0;
       }
-
       res[k] = {
+        baseCoin: (obj.base_coin || 'SOL').toUpperCase(),
         entryPx: entry,
         sl     : entry && lower != null ? entry * (1 - lower) : null,
         tp     : entry && upper != null ? entry * (1 + upper) : null,
@@ -169,12 +142,24 @@ export default function App() {
     return res;
   }, [dashboard, nowSec]);
 
-  /* позиции для графика */
+  /* позиции → массив */
   const chartPositions = useMemo(() =>
     Object.entries(stages).map(([k, v]) => ({ key:k, visible:visible[k], ...v })),
   [stages, visible]);
 
-  /* totalling uPnL */
+  /* группируем по монетам */
+  const positionsByCoin = useMemo(() => {
+    const m = {};
+    chartPositions.forEach(p => (m[`${p.baseCoin}USDT`] ||= []).push(p));
+    return m;
+  }, [chartPositions]);
+
+  /* список монет для вкладок */
+  const tabCoins = Object.keys(positionsByCoin).length
+    ? Object.keys(positionsByCoin)
+    : [settings.coin];
+
+  /* суммарные uPnL */
   const totals = useMemo(() => {
     let fut = 0, opt = 0;
     for (const v of Object.values(stages)) {
@@ -184,72 +169,46 @@ export default function App() {
     return { fut, opt, total: fut + opt };
   }, [stages]);
 
-  /* ─── JSX ───────────────────────────────────────────────── */
+  /* статус активного графика */
+  const [chartStatus, setChartStatus] = useState({
+    coin: tabCoins[0],
+    wsConnected: false,
+    candleCount: 0,
+    reconnect: () => {},
+  });
+
+  /* ─── JSX ──────────────────────────────────────────────── */
   return (
     <div className="app-container">
-
-      {/* ─── форма параметров ─────────────────────────────── */}
+      {/* верхняя панель настроек */}
       <form className="form-row" onSubmit={onSubmit}>
         <label>Coin
-          <input
-            name="coin"
-            value={form.coin}
-            onChange={onChange}
-            autoComplete="off"
-            spellCheck="false"
-          />
+          <input name="coin" value={form.coin} onChange={onChange} autoComplete="off" spellCheck="false" />
         </label>
         <label>Candles
-          <input
-            type="number"
-            name="number_candles"
-            min="1"
-            max="1500"
-            value={form.number_candles}
-            onChange={onChange}
-          />
+          <input type="number" name="number_candles" min="1" max="1500" value={form.number_candles} onChange={onChange}/>
         </label>
         <label>Interval&nbsp;(m)
-          <input
-            type="number"
-            name="interv"
-            min="1"
-            value={form.interv}
-            onChange={onChange}
-          />
-        </label>
-
-        {/* чек-боксы стадий */}
-        <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={visible.first}
-            onChange={e => setVisible(p => ({ ...p, first:e.target.checked }))}
-          />
-          first
+          <input type="number" name="interv" min="1" value={form.interv} onChange={onChange}/>
         </label>
         <label className="checkbox">
-          <input
-            type="checkbox"
-            checked={visible.second}
-            onChange={e => setVisible(p => ({ ...p, second:e.target.checked }))}
-          />
-          second
+          <input type="checkbox" checked={visible.first}  onChange={e=>setVisible(p=>({...p,first :e.target.checked}))}/> first
         </label>
-
+        <label className="checkbox">
+          <input type="checkbox" checked={visible.second} onChange={e=>setVisible(p=>({...p,second:e.target.checked}))}/> second
+        </label>
         <button type="submit">Load</button>
       </form>
 
-      {/* ─── основное содержимое ──────────────────────────── */}
+      {/* контент */}
       <div className="main-content">
-        <div className="chart-wrapper">
-          {loading && <div style={{padding:8}}>Loading…</div>}
-          {!loading && candles.length === 0 && <div style={{padding:8}}>No data.</div>}
-          {candles.length > 0 && (
-            <Chart candles={candles} positions={chartPositions} />
-          )}
-        </div>
-
+        <ChartTabs
+          coins={tabCoins}
+          number_candles={settings.number_candles}
+          interv={settings.interv}
+          positionsByCoin={positionsByCoin}
+          onStatusChange={setChartStatus}
+        />
         <StatsPanel
           stages={{
             first : stages.first  && { futPnl:stages.first.futPnl,  optPnl:stages.first.optPnl,  total:Number(stages.first.futPnl||0)+Number(stages.first.optPnl||0) },
@@ -259,7 +218,7 @@ export default function App() {
         />
       </div>
 
-      {/* ─── progress-bars ───────────────────────────────── */}
+      {/* прогресс-бары */}
       {['first','second'].map(k => {
         const pr = stages[k]?.progress;
         if (!pr || pr.remaining == null) return null;
@@ -268,38 +227,28 @@ export default function App() {
           <div className="progress-wrapper" key={'p'+k}>
             <div className="progress-label">{lbl}</div>
             <div className="progress-bar">
-              <div
-                className="progress-fill-absolute"
-                style={{ width:`${pr.percent}%`, background:stages[k].colors.entry }}
-              />
+              <div className="progress-fill-absolute" style={{width:`${pr.percent}%`, background:stages[k].colors.entry}}/>
             </div>
           </div>
         );
       })}
 
-      {/* ─── таблица опционов ─────────────────────────────── */}
       <OptionTable stages={stages} />
 
-      {/* ─── status-bar снизу ─────────────────────────────── */}
+      {/* нижняя строка */}
       <div className="status-bar">
         <span>
           Chart&nbsp;WS:&nbsp;
-          {wsConnected ? 'Connected' : 'Disconnected'}
-          {!wsConnected && (
+          {chartStatus.wsConnected ? 'Connected' : 'Disconnected'}
+          {!chartStatus.wsConnected && (
             <button
               type="button"
-              onClick={reconnect}
+              onClick={chartStatus.reconnect}
               title="Reconnect WebSocket now"
               style={{
-                marginLeft: 6,
-                padding: '0 6px',
-                background: '#333',
-                color: '#fff',
-                border: '1px solid #555',
-                borderRadius: 3,
-                cursor: 'pointer',
-                fontSize: 12,
-                lineHeight: '14px',
+                marginLeft:6,padding:'0 6px',background:'#333',color:'#fff',
+                border:'1px solid #555',borderRadius:3,cursor:'pointer',
+                fontSize:12,lineHeight:'14px',
               }}
             >
               ↻
@@ -307,7 +256,7 @@ export default function App() {
           )}
         </span>
         <span>DB:&nbsp;{dbConnected ? 'Connected' : 'Disconnected'}</span>
-        <span>{`Showing ${candles.length} candles for ${settings.coin} @ ${settings.interv}m`}</span>
+        <span>{`Showing ${chartStatus.candleCount} candles for ${chartStatus.coin} @ ${settings.interv}m`}</span>
       </div>
     </div>
   );

@@ -3,82 +3,86 @@
     "exist": true,
     "stages": {
       "first": {
-        "amount": 1,
-        "exist": true,
+        "amount": 2,
+        "base_coin": "SOL",
+        "exist": false,
         "expect": 0.15,
-        "lower_perc": 0.05269337064657883,
-        "over_strike": 0.025,
+        "lower_perc": 0.03,
+        "over_strike": 0.2,
         "position": {
-          "exist": true,
+          "exist": false,
           "leg": {
-            "contracts": 1,
-            "exist": true,
-            "hours_to_exp": 8.7222,
+            "contracts": 0,
+            "deliveryTime": 0,
+            "exist": false,
+            "hours_to_exp": 0,
             "info": {
-              "curRealisedPnl": -0.0854,
-              "markPrice": 0.1894736,
-              "positionValue": 0.5684208,
-              "side": "Buy",
-              "size": 3,
-              "symbol": "SOL-30JUL25-175-P-USDT",
-              "unrealisedPnl": 0.09,
-              "used_bid": 0.09
+              "avgPrice": 0,
+              "curRealisedPnl": 0,
+              "markPrice": 0,
+              "positionValue": 0,
+              "size": 0,
+              "unrealisedPnl": 0,
+              "used_bid": 0
             },
-            "name": "SOL-30JUL25-175-P-USDT",
-            "tp_id": "hedgeTP-c908e57dba2b4e9bbc"
+            "name": ""
           },
-          "open_time": "2025-07-29 21:46:19.790000+00:00",
-          "pnl_target": 1.1515054944241518,
+          "open_time": "",
+          "pnl_target": 0,
           "position_info": {
-            "entryPx": 180.17,
-            "positionValue": 56.2495,
-            "side": 1,
-            "size": 0.31,
-            "unrealizedPnl": 0.3875
+            "entryPx": 0,
+            "positionValue": 0,
+            "side": 0,
+            "size": 0,
+            "unrealizedPnl": 0
           }
         },
-        "to_exp_init": 11.178880594166666,
-        "upper_perc": 0.029999999999999968
+        "rel_atr": 0.08,
+        "rsi": 55.4,
+        "to_exp_init": 0,
+        "upper_perc": 0.02
       },
       "second": {
-        "amount": 2,
-        "exist": true,
-        "expect": 0.25,
-        "lower_perc": 0.053225060909273744,
-        "over_strike": 0.025,
+        "amount": 4,
+        "base_coin": "SOL",
+        "exist": false,
+        "expect": 0.3,
+        "lower_perc": 0.03,
+        "over_strike": 0.2,
         "position": {
-          "exist": true,
+          "exist": false,
           "leg": {
-            "contracts": 2,
-            "exist": true,
-            "hours_to_exp": 8.7216,
+            "contracts": 0,
+            "deliveryTime": 0,
+            "exist": false,
+            "hours_to_exp": 0,
             "info": {
-              "curRealisedPnl": -0.0854,
-              "markPrice": 0.18898428,
-              "positionValue": 0.56695284,
-              "side": "Buy",
-              "size": 3,
-              "symbol": "SOL-30JUL25-175-P-USDT",
-              "unrealisedPnl": 0.18,
-              "used_bid": 0.09
+              "avgPrice": 0,
+              "curRealisedPnl": 0,
+              "markPrice": 0,
+              "positionValue": 0,
+              "size": 0,
+              "unrealisedPnl": 0,
+              "used_bid": 0
             },
-            "name": "SOL-30JUL25-175-P-USDT",
-            "tp_id": "hedgeTP-1e56510491c045aab2"
+            "name": ""
           },
-          "open_time": "2025-07-29 21:46:19.790000+00:00",
-          "pnl_target": 2.4835134582874248,
+          "open_time": "",
+          "pnl_target": 0,
           "position_info": {
-            "entryPx": 180.26,
-            "positionValue": 112.499,
-            "side": 1,
-            "size": 0.62,
-            "unrealizedPnl": 0.7191999999999978
+            "entryPx": 0,
+            "positionValue": 0,
+            "side": 0,
+            "size": 0,
+            "unrealizedPnl": 0
           }
         },
-        "to_exp_init": 10.232092980833333,
-        "upper_perc": 0.0300000000000001
+        "rel_atr": 0.08,
+        "rsi": 55.4,
+        "to_exp_init": 0,
+        "upper_perc": 0.02
       }
     },
-    "time": "2025-07-30 00:16:54.503117"
+    "time": "2025-08-03 11:49:47.993959"
   }
 }

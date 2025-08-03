@@ -72,6 +72,7 @@ a {
 
 /* Обёртка графика */
 .chart-wrapper {
+  height: 100%;
   flex: 1;
   position: relative;
   overflow: hidden;
@@ -386,4 +387,27 @@ a {
 
 .stats-table .data-cell {
   text-align: right;
+}
+
+/* вкладки графиков */
+.chart-tabs-header {
+  display: flex;
+  gap: 4px;
+  padding: 4px 6px;
+  background: #181818;
+  border-bottom: 1px solid #333;
+}
+.chart-tabs-header .tab {
+  padding: 4px 10px;
+  background: #222;
+  border: 1px solid #333;
+  border-bottom: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #ccc;
+  border-radius: 4px 4px 0 0;
+}
+.chart-tabs-header .tab.active {
+  background: #3a7afe;
+  color: #fff;
 }
