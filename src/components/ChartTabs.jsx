@@ -16,7 +16,7 @@ function ChartWithData({ symbol, number_candles, interv, positions, reportStatus
   return (
     <div
       className="chart-wrapper"
-      style={{ flex: '1 1 0', minHeight: '320px', position: 'relative' }}
+      style={{ position: 'relative', width: '100%', height: '100%' }}
     >
       {loading && <div style={{ padding: 8 }}>Loading…</div>}
       {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
