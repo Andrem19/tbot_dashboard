@@ -348,10 +348,6 @@ a {
     overflow-x: hidden;
   }
 
-  .main-content {
-    flex-direction: column;
-  }
-
   .form-row {
     gap: 6px;
     padding: 6px;
