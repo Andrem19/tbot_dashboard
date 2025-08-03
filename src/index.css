@@ -23,6 +23,7 @@ a {
   overflow-x: hidden;
   overflow-y: auto;       /* вертикальный скролл на всём приложении          */
 }
+
 /* === Форма === */
 .form-row {
   display: flex;
@@ -197,6 +198,7 @@ a {
   overflow: visible;      /* ничего не обрезаем                              */
   row-gap: 0;             /* чтобы не было лишних «щелей»                    */
 }
+
 /* === Правая панель === */
 .stats-panel{
   flex: 0 0 240px;        /* фикс 240 px, НЕ сжимается, но «прыгает» на новую
@@ -301,8 +303,10 @@ a {
 /* === Мобильная верстка (объединено) === */
 @media (max-width: 768px) {
   /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */
-  .main-content{
-    flex-wrap: nowrap;      /* обратно в одну строку                        */
+  .main-content {
+    flex-direction: column;
+    overflow: visible;          /* ничего не режем */
+    height: auto;               /* не фиксируем высоту */
   }
 
   .stats-panel {
