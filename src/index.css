@@ -322,27 +322,24 @@ a {
 @media (max-width: 768px) {
   /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */
   .main-content {
-    flex-direction: column;
-    overflow: visible;          /* ничего не режем */
-    height: auto;               /* не фиксируем высоту */
+    display: block;      /* ← ключ! */
+    overflow: visible;
+    height: auto;
   }
+
 
   /* график пусть занимает ровно то, что нужно */
 
   .chart-wrapper {
-    order: 1;
-    flex: 1 1 auto;         /* тянемся сколько дадут */
-    min-height: 50vh;       /* но не меньше половины экрана */
+    min-height: 50vh;
     height: auto !important;
     overflow: hidden;
-    position: relative;
   }
   /* панель со статистикой сразу под графиком */
   .stats-panel {
-    order: 3;
-    /* … */
-    position: relative;
-    z-index: auto;
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid #333;
   }
 
   /* таблица опциона ниже панели статистики */
