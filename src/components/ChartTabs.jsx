@@ -47,12 +47,13 @@ export default function ChartTabs({
 
   return (
     <div
+      className="chart-tabs-root"
       style={{
-        flex: '1 1 0',
+        flex: '1 1 auto',        // берём всё свободное место
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
-        minHeight: 0,         /* критично! */
+        overflow: 'visible',     // ✨ даём контенту выйти
+        minHeight: 0,
       }}
     >
       {/* заголовок вкладок (если монет > 1) */}
