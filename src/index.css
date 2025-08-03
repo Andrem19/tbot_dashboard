@@ -259,10 +259,11 @@ a { color: #61dafb; }
   /* --- график --- */
   .chart-wrapper {
     order: 1;
-    flex: 0 0 auto;      /* фиксируется min-height, остальное тянет контент */
-    min-height: 50vh;    /* не меньше половины экрана */
+    flex: 1 1 auto;        /* растягиваемся, но не меньше min-height */
+    min-height: 50vh;      /* ⬅️ гарантируем графику ≥ половины экрана */
+    height: auto !important;
     position: relative;
-    overflow: hidden;
+    overflow: auto;
   }
   /* --- статистика под графиком --- */
   .stats-panel {
@@ -272,7 +273,7 @@ a { color: #61dafb; }
     border-left: none;
     border-top: 1px solid #333;
     position: relative;
-    z-index: auto;       /* ⬅️ убрали 2 */
+    z-index: 2;
   }
 
   /* --- опционная таблица под панелью --- */
@@ -280,8 +281,8 @@ a { color: #61dafb; }
     order: 3;
     width: 100%;
     margin-top: 8px;
-    z-index: auto;       /* ⬅️ убрали 1 */
   }
+
   /* --- разрешаем вертикальный скролл всему приложению --- */
   .app-container {
     overflow-y: auto;
