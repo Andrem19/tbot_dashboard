@@ -306,33 +306,52 @@ a {
   background: #3a7afe;
   color: #fff;
 }
+.chart-tabs-root {
+  display: flex;
+  flex: 1 1 0; /* на десктопе растёт, но даём право сжиматься */
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0; /* важно внутри flex-контекста */
+}
 
 /* === Мобильная верстка (объединено) === */
 @media (max-width: 768px) {
   /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */
   .main-content {
-    flex-direction: column;
-    overflow: visible;          /* ничего не режем */
-    height: auto;               /* не фиксируем высоту */
+    display: block; /* упрощаем поток: график, затем опционы, затем статистика */
+    height: auto;
+    overflow: visible;
   }
 
-  .stats-panel {
-    order: 2;
-    width: 100%;
-    flex: 0 0 auto;
-    border-left: none;
-    border-top: 1px solid #333;
+  .chart-wrapper {
+    min-height: 50vh;
+    height: auto !important;
+    overflow: hidden;
     position: relative;
-    z-index: 2;                 /* поверх всего остального */
   }
 
   .option-table-wrapper {
-    order: 3;
-    flex: 0 0 auto;
     width: 100%;
-    position: relative;
-    z-index: 1;
     margin-top: 8px;
+    position: relative;
+    z-index: auto;
+  }
+
+  .stats-panel {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid #333;
+    position: relative;
+    z-index: auto;
+    margin-top: 0;
+  }
+
+  /* отключаем любые старые order-правила если они остались */
+  .stats-panel, .option-table-wrapper {
+    order: unset !important;
+  }
+  .chart-tabs-root {
+    flex: none;
   }
 
   .app-container {
