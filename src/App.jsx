@@ -202,7 +202,6 @@ export default function App() {
 
       {/* контент */}
       <div className="main-content">
-        <div>
           <ChartTabs
             coins={tabCoins}
             number_candles={settings.number_candles}
@@ -210,7 +209,6 @@ export default function App() {
             positionsByCoin={positionsByCoin}
             onStatusChange={setChartStatus}
           />
-        </div>
         <StatsPanel
           stages={{
             first : stages.first  && { futPnl:stages.first.futPnl,  optPnl:stages.first.optPnl,  total:Number(stages.first.futPnl||0)+Number(stages.first.optPnl||0) },
