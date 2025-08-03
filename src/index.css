@@ -257,9 +257,9 @@ a { color: #61dafb; }
   /* --- график --- */
   .chart-wrapper {
     order: 1;
-    flex: 1 1 0;     /* тянемся по высоте максимально */
-    min-height: 260px;  /* safeguard для очень маленьких экранов */
-    height: auto !important;  /* убираем прежние inline/fixed высоты */
+    flex: 1 1 auto;        /* растягиваемся, но не меньше min-height */
+    min-height: 50vh;      /* ⬅️ гарантируем графику ≥ половины экрана */
+    height: auto !important;
     position: relative;
     overflow: hidden;
   }
