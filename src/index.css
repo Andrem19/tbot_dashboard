@@ -339,15 +339,15 @@ a {
   }
   /* панель со статистикой сразу под графиком */
   .stats-panel {
-    order: 2;
+    order: 3;
     /* … */
     position: relative;
-    z-index: 2;
+    z-index: auto;
   }
 
   /* таблица опциона ниже панели статистики */
   .option-table-wrapper {
-    order: 3;
+    order: 2;
     flex: 0 0 auto;
     width: 100%;
     position: relative;
