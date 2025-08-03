@@ -318,40 +318,28 @@ a {
 @media (max-width: 768px) {
   /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */
   .main-content {
-    display: block; /* упрощаем поток: график, затем опционы, затем статистика */
-    height: auto;
-    overflow: visible;
-  }
-
-  .chart-wrapper {
-    min-height: 50vh;
-    height: auto !important;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .option-table-wrapper {
-    width: 100%;
-    margin-top: 8px;
-    position: relative;
-    z-index: auto;
+    flex-direction: column;
+    overflow: visible;          /* ничего не режем */
+    height: auto;               /* не фиксируем высоту */
   }
 
   .stats-panel {
+    order: 2;
     width: 100%;
+    flex: 0 0 auto;
     border-left: none;
     border-top: 1px solid #333;
     position: relative;
-    z-index: auto;
-    margin-top: 0;
+    z-index: 2;                 /* поверх всего остального */
   }
 
-  /* отключаем любые старые order-правила если они остались */
-  .stats-panel, .option-table-wrapper {
-    order: unset !important;
-  }
-  .chart-tabs-root {
-    flex: none;
+  .option-table-wrapper {
+    order: 3;
+    flex: 0 0 auto;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+    margin-top: 8px;
   }
 
   .app-container {
@@ -359,7 +347,9 @@ a {
     overflow-x: hidden;
   }
 
-
+  .main-content {
+    flex-direction: column;
+  }
 
   .form-row {
     gap: 6px;
@@ -391,5 +381,17 @@ a {
     flex: 1 1 100%;
     margin-top: 2px;
     padding: 10px 0;
+  }
+
+  .chart-wrapper {
+    order: 1;
+
+    /* 1️⃣ Блок не должен расти выше 280 px */
+    height: 280px;
+    flex: 0 0 280px;
+
+    /* 2️⃣ И ничего наружу — библиотека может ставить width/height вручную */
+    overflow: hidden;
+    position: relative;   /* для абсолютных внутренних плоскостей */
   }
 }

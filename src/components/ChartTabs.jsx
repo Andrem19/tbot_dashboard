@@ -47,7 +47,7 @@ export default function ChartTabs({
   }, [active, onStatusChange]);
 
   return (
-    <div className="chart-tabs-root"
+    <div 
       style={{
         flex: '1 1 auto',
         display: 'flex',
