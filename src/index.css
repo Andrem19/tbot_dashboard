@@ -329,9 +329,31 @@ a {
 
   /* график пусть занимает ровно то, что нужно */
 
-  .chart-wrapper      { order: 1; }  /* график */
-  .option-table-wrapper { order: 2; }  /* таблица опционов */
-  .stats-panel        { order: 3; }  /* статистика – самой последней */
+  .chart-wrapper {
+    order: 1;
+    flex: 1 1 auto;         /* тянемся сколько дадут */
+    min-height: 50vh;       /* но не меньше половины экрана */
+    height: auto !important;
+    overflow: hidden;
+    position: relative;
+  }
+  /* панель со статистикой сразу под графиком */
+  .stats-panel {
+    order: 3;
+    /* … */
+    position: relative;
+    z-index: auto;
+  }
+
+  /* таблица опциона ниже панели статистики */
+  .option-table-wrapper {
+    order: 2;
+    flex: 0 0 auto;
+    width: 100%;
+    position: relative;
+    z-index: auto;
+    margin-top: 8px;
+  }
 
   /* контейнер всего приложения — разрешаем вертикальный скролл */
   .app-container {
