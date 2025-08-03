@@ -80,8 +80,7 @@ a {
   padding: 4px;
   min-height: 300px;
   border-top: 1px solid #333;
-  display: flex;
-  flex-direction: column;
+  height: 100%;
 }
 
 .chart-container {
@@ -200,10 +199,9 @@ a {
 
 /* === Основной блок === */
 .main-content {
-  display: flex;
   flex: 1;
+  display: flex;
   overflow: hidden;
-  min-height: 0; /* важно для вложенных flex-элементов */
 }
 
 /* === Правая панель === */
@@ -308,26 +306,14 @@ a {
   background: #3a7afe;
   color: #fff;
 }
-.chart-tabs-root {
-  display: flex;
-  flex: 1 1 0; /* на десктопе растёт, но даём право сжиматься */
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0; /* важно внутри flex-контекста */
-}
-.chart-tabs-root {
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-}
 
 /* === Мобильная верстка (объединено) === */
 @media (max-width: 768px) {
   /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */
   .main-content {
-    display: block; /* чтобы порядок: график, потом опции, потом статистика */
+    flex-direction: column;
+    overflow: visible;          /* ничего не режем */
+    height: auto;               /* не фиксируем высоту */
   }
 
   .stats-panel {
@@ -352,6 +338,10 @@ a {
   .app-container {
     overflow-y: auto;
     overflow-x: hidden;
+  }
+
+  .main-content {
+    flex-direction: column;
   }
 
   .form-row {
@@ -387,7 +377,14 @@ a {
   }
 
   .chart-wrapper {
-    min-height: 50vh;
-    height: auto !important;
+    order: 1;
+
+    /* 1️⃣ Блок не должен расти выше 280 px */
+    height: 280px;
+    flex: 0 0 280px;
+
+    /* 2️⃣ И ничего наружу — библиотека может ставить width/height вручную */
+    overflow: hidden;
+    position: relative;   /* для абсолютных внутренних плоскостей */
   }
 }
