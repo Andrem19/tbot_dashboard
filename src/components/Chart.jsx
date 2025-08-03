@@ -154,5 +154,18 @@ export default function Chart({ candles, positions = [] }) {
     markersRef.current = markers;
   }, [positions, candles]);
 
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      normalizeSize();
+    });
+    observer.observe(containerRef.current.parentElement);
+    window.addEventListener('orientationchange', normalizeSize);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('orientationchange', normalizeSize);
+    };
+  }, []);
+
   return <div ref={containerRef} className="chart-container" />;
 }

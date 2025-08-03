@@ -98,8 +98,14 @@ a { color: #61dafb; }
   gap: 8px;
   font-size: 13px;
 }
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
 .stats-title {
-  margin: 0 0 8px;
+  margin: 0 0 8px 0;
   font-size: 14px;
   font-weight: 600;
   color: #ccc;
@@ -120,7 +126,9 @@ a { color: #61dafb; }
   border-bottom: 1px solid #2a2a2a;
   color: #ddd;
 }
-.stats-row.total { font-weight: 600; }
+.stats-row.total {
+  font-weight: 600;
+}
 
 /* ========== STATUS-BAR =================================================== */
 .status-bar {
@@ -248,9 +256,11 @@ a { color: #61dafb; }
   /* --- график --- */
   .chart-wrapper {
     order: 1;
-    height: 60vh;          /* ► занимать ~60 % высоты экрана */
-    min-height: 320px;     /*   но не меньше 320 px      */
-    flex: 0 0 auto;        /*   ровно свою высоту        */
+    height: 60vh;          /* занимать 60% высоты экрана */
+    min-height: 360px;     /* не меньше, чтобы не было «слишком узко» */
+    flex: 0 0 auto;        /* фиксированная высота */
+    position: relative;
+    overflow: hidden;
   }
 
   /* --- статистика под графиком --- */
