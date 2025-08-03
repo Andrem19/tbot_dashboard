@@ -13,13 +13,11 @@ function ChartWithData({ symbol, number_candles, interv, positions, reportStatus
   }, [symbol, wsConnected, reconnect, candles.length, reportStatus]);
 
   return (
-    <div className="chart-wrapper">
-      <div>
+      <>
         {loading && <div style={{ padding: 8 }}>Loading…</div>}
         {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
         {!!candles.length && <Chart candles={candles} positions={positions} />}
-      </div>
-    </div>
+      </>
   );
 }
 
@@ -47,7 +45,7 @@ export default function ChartTabs({
   }, [active, onStatusChange]);
 
   return (
-    <div 
+    <div className="chart-tabs-root"
       style={{
         flex: '1 1 auto',
         display: 'flex',
