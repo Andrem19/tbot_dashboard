@@ -52,7 +52,7 @@ export default function ChartTabs({
         flex: '1 1 auto',        // берём всё свободное место
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
+        overflow: 'visible',
         minHeight: 0,
       }}
     >
