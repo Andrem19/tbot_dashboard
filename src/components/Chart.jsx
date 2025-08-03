@@ -22,49 +22,56 @@ export default function Chart({ candles, positions = [] }) {
     const el = containerRef.current;
     const ch = chartRef.current;
     if (!el || !ch) return;
-
-    // убираем навязанные библиотекой inline-ширину/высоту
-    el.style.width  = '100%';
+    el.style.width = '100%';
     el.style.height = '100%';
-
-    // реальные размеры родителя .chart-wrapper
-    const { width, height } = el.parentElement.getBoundingClientRect();
+    const { width, height } = el.getBoundingClientRect(); // <- важно: берём сам контейнер, не parent
     if (width && height) ch.resize(width, height);
   };
 
-  /* ——— инициализация ——— */
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+/* ——— инициализация ——— */
+useEffect(() => {
+  const el = containerRef.current;
+  if (!el) return;
+  const chart = createChart(el, {
+    layout: { background: { color: '#0f0f0f' }, textColor: '#d1d4dc' },
+    grid: { vertLines: { color: '#2B2B43' }, horzLines: { color: '#2B2B43' } },
+    crosshair: { mode: CrosshairMode.Normal },
+    rightPriceScale: { borderVisible: false },
+    timeScale: { borderVisible: false, timeVisible: true, rightOffset: 10, barSpacing: 6 },
+    handleScroll: { mouseWheel: true, pressedMouseMove: true },
+    handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+  });
+  const series = chart.addCandlestickSeries({
+    upColor: '#26a69a',
+    downColor: '#ef5350',
+    wickUpColor: '#26a69a',
+    wickDownColor: '#ef5350',
+    borderVisible: false,
+    priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
+  });
+  chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+    userAtRightRef.current = chart.timeScale().scrollPosition() === 0;
+  });
+  chartRef.current = chart;
+  seriesRef.current = series;
 
-    const chart = createChart(el, {
-      layout   : { background:{color:'#0f0f0f'}, textColor:'#d1d4dc' },
-      grid     : { vertLines:{color:'#2B2B43'}, horzLines:{color:'#2B2B43'} },
-      crosshair: { mode:CrosshairMode.Normal },
-      rightPriceScale:{ borderVisible:false },
-      timeScale:{ borderVisible:false, timeVisible:true, rightOffset:10, barSpacing:6 },
-      handleScroll:{ mouseWheel:true, pressedMouseMove:true },
-      handleScale :{ axisPressedMouseMove:true, mouseWheel:true, pinch:true },
-    });
+  normalizeSize(); // первый раз
 
-    const series = chart.addCandlestickSeries({
-      upColor:'#26a69a', downColor:'#ef5350',
-      wickUpColor:'#26a69a', wickDownColor:'#ef5350',
-      borderVisible:false,
-      priceFormat:{ type:'price', precision:2, minMove:0.01 },
-    });
+  // Следим за изменением размера контейнера
+  const resizeObserver = new ResizeObserver(() => {
+    normalizeSize();
+  });
+  resizeObserver.observe(el);
 
-    chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
-      userAtRightRef.current = chart.timeScale().scrollPosition() === 0;
-    });
+  // ориентация и прочие внешние события
+  window.addEventListener('orientationchange', normalizeSize);
 
-    chartRef.current  = chart;
-    seriesRef.current = series;
-
-    normalizeSize();          // первый раз — сразу после создания
-
-    return () => chart.remove();
-  }, []);
+  return () => {
+    resizeObserver.disconnect();
+    window.removeEventListener('orientationchange', normalizeSize);
+    chart.remove();
+  };
+}, []);
 
   /* ——— свечи ——— */
   useEffect(() => {

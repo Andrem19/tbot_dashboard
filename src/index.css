@@ -256,9 +256,9 @@ a { color: #61dafb; }
   /* --- график --- */
   .chart-wrapper {
     order: 1;
-    height: 60vh;          /* занимать 60% высоты экрана */
-    min-height: 360px;     /* не меньше, чтобы не было «слишком узко» */
-    flex: 0 0 auto;        /* фиксированная высота */
+    height: 60vh;
+    min-height: 360px;
+    flex: 0 0 auto;
     position: relative;
     overflow: hidden;
   }
