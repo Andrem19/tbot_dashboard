@@ -14,11 +14,11 @@ function ChartWithData({ symbol, number_candles, interv, positions, reportStatus
 
   return (
     <div className="chart-wrapper">
-    <div>
-      {loading && <div style={{ padding: 8 }}>Loading…</div>}
-      {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
-      {!!candles.length && <Chart candles={candles} positions={positions} />}
-    </div>
+      <div>
+        {loading && <div style={{ padding: 8 }}>Loading…</div>}
+        {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
+        {!!candles.length && <Chart candles={candles} positions={positions} />}
+      </div>
     </div>
   );
 }
