@@ -235,11 +235,45 @@ a {
 .flash-val.up   { background: rgba(0, 255,   0, 0.15); }
 .flash-val.down { background: rgba(255, 0,   0, 0.15); }
 
-/* Mobile: панель снизу */
+.progress-fill-static {
+  height: 100%;
+  background: linear-gradient(90deg, #6a5acd, #8a2be2);
+  transition: width 0.4s ease;
+}
+
+/* в App.css или отдельном файле */
+.progress-wrapper {
+  padding: 8px 12px;
+  background: #181818;
+  border-top: 1px solid #333;
+}
+
+.progress-label {
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #ccc;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill-absolute {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #6a5acd, #8a2be2);
+  transition: width 0.4s ease;
+}
+/* ========== МОБИЛЬНАЯ ВЕРСТКА ========== */
 @media (max-width: 768px) {
-  .main-content {
-    flex-direction: column;
-  }
+
   .stats-panel {
     width: 100%;
     border-left: none;
@@ -280,65 +314,19 @@ a {
     margin-top: 2px;
     padding: 10px 0;
   }
-}
-
-.progress-fill-static {
-  height: 100%;
-  background: linear-gradient(90deg, #6a5acd, #8a2be2);
-  transition: width 0.4s ease;
-}
-
-/* в App.css или отдельном файле */
-.progress-wrapper {
-  padding: 8px 12px;
-  background: #181818;
-  border-top: 1px solid #333;
-}
-
-.progress-label {
-  font-size: 12px;
-  margin-bottom: 4px;
-  color: #ccc;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 8px;
-  background: #333;
-  border-radius: 4px;
-  overflow: hidden;
-  position: relative;
-}
-
-.progress-fill-absolute {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: linear-gradient(90deg, #6a5acd, #8a2be2);
-  transition: width 0.4s ease;
-}
-/* ========== МОБИЛЬНАЯ ВЕРСТКА ========== */
-@media (max-width: 768px) {
   /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */
   .main-content {
-    flex-direction: column;
-    overflow: visible;          /* ничего не режем */
-    height: auto;               /* не фиксируем высоту */
+    flex: 1 1 0;
+    overflow: visible;
+    height: auto;
   }
 
   /* график пусть занимает ровно то, что нужно */
 
   .chart-wrapper {
-    order: 1;
-
-    /* 1️⃣ Блок не должен расти выше 280 px */
-    height: 280px;
-    flex: 0 0 280px;
-
-    /* 2️⃣ И ничего наружу — библиотека может ставить width/height вручную */
-    overflow: hidden;
-    position: relative;   /* для абсолютных внутренних плоскостей */
+    flex: 1 1 auto;
+    min-height: 320px;   /* можно изменить по вкусу */
+    height: auto !important;   /* переезжаем с inline-высоты */
   }
   /* панель со статистикой сразу под графиком */
   .stats-panel {

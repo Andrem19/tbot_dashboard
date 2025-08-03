@@ -7,13 +7,17 @@ function ChartWithData({ symbol, number_candles, interv, positions, reportStatus
   const { candles, loading, wsConnected, reconnect } =
     useBinanceKlines({ coin: symbol, number_candles, interv });
 
-  /* передаём состояние наверх (для строки статуса) */
+  /* шлём состояние активного графика наверх */
   useEffect(() => {
     reportStatus({ coin: symbol, wsConnected, reconnect, candleCount: candles.length });
   }, [symbol, wsConnected, reconnect, candles.length, reportStatus]);
 
+  /*  flex:1   → растягивается;  minHeight поддерживает «нижнюю планку»   */
   return (
-    <div className="chart-wrapper" style={{ height: '100%' }}>
+    <div
+      className="chart-wrapper"
+      style={{ flex: '1 1 0', minHeight: '320px', position: 'relative' }}
+    >
       {loading && <div style={{ padding: 8 }}>Loading…</div>}
       {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
       {!!candles.length && <Chart candles={candles} positions={positions} />}
