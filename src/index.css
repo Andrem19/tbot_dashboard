@@ -307,7 +307,14 @@ a {
   background: #3a7afe;
   color: #fff;
 }
-
+.chart-tabs-root{
+  flex: 1 1 0;
+  min-width: 0;          /* критично */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;         /* уже было */
+}
 /* === Мобильная верстка (объединено) === */
 @media (max-width: 768px) {
   /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */

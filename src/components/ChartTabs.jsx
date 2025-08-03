@@ -45,15 +45,7 @@ export default function ChartTabs({
   }, [active, onStatusChange]);
 
   return (
-    <div 
-      style={{
-        flex: '1 1 auto',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        minHeight: 0,         /* критично! */
-      }}
-    >
+    <div className="chart-tabs-root">
       {/* заголовок вкладок (если монет > 1) */}
       {coins.length > 1 && (
         <div className="chart-tabs-header">
