@@ -7,16 +7,16 @@ function ChartWithData({ symbol, number_candles, interv, positions, reportStatus
   const { candles, loading, wsConnected, reconnect } =
     useBinanceKlines({ coin: symbol, number_candles, interv });
 
-  /* шлём состояние активного графика наверх */
+  /* передаём состояние графика наверх */
   useEffect(() => {
     reportStatus({ coin: symbol, wsConnected, reconnect, candleCount: candles.length });
   }, [symbol, wsConnected, reconnect, candles.length, reportStatus]);
 
-  /*  flex:1   → растягивается;  minHeight поддерживает «нижнюю планку»   */
+  /* ВАЖНО:   height убрали — высота берётся из CSS (45vh на mobile, flex:1 на desktop) */
   return (
     <div
       className="chart-wrapper"
-      style={{ position: 'relative', width: '100%', height: '100%' }}
+      style={{ position: 'relative', width: '100%' }}
     >
       {loading && <div style={{ padding: 8 }}>Loading…</div>}
       {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
@@ -24,6 +24,7 @@ function ChartWithData({ symbol, number_candles, interv, positions, reportStatus
     </div>
   );
 }
+
 
 /* ── вкладки ─────────────────────────────────────────────── */
 export default function ChartTabs({
