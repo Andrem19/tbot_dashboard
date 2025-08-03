@@ -19,12 +19,9 @@ a {
 }
 
 /* === Контейнер приложения === */
-.app-container {
-  min-height: 100vh;           /* пусть растёт вниз сколько нужно */
-  display: flex;
-  flex-direction: column;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-  overflow: visible;           /* разрешаем скролл родителю */
+.app-container{
+  overflow-x: hidden;
+  overflow-y: auto;       /* вертикальный скролл на всём приложении          */
 }
 
 /* === Форма === */
@@ -74,14 +71,10 @@ a {
 }
 
 /* === Обёртка и контейнер графика === */
-.chart-wrapper {
-  flex: 1 1 auto;
-  position: relative;
-  overflow: hidden;
-  padding: 4px;
-  min-height: 300px;
-  border-top: 1px solid #333;
-  height: 100%;
+.chart-wrapper{
+  /* было: height:100%  ― сбивало высоту, если родитель сам не фиксирован   */
+  height: auto;
+  min-height: 300px;      /* safeguard, как и раньше                         */
 }
 
 .chart-container {
@@ -199,23 +192,19 @@ a {
 }
 
 /* === Основной блок === */
-.main-content {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
+.main-content{
+  display: flex;          /* оставляем строкой                               */
+  flex-wrap: wrap;        /* …но разрешаем перенос, если ширины не хватает   */
+  overflow: visible;      /* ничего не обрезаем                              */
+  row-gap: 0;             /* чтобы не было лишних «щелей»                    */
 }
 
 /* === Правая панель === */
-.stats-panel {
-  width: 240px;
-  min-width: 200px;
-  background: #1b1b1b;
+.stats-panel{
+  flex: 0 0 240px;        /* фикс 240 px, НЕ сжимается, но «прыгает» на новую
+                             строку, когда 240 px целиком не помещается      */
   border-left: 1px solid #333;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 13px;
+  border-top: none;       /* на десктопе бордер сверху не нужен              */
 }
 
 .stats-title {
@@ -308,12 +297,8 @@ a {
   color: #fff;
 }
 .chart-tabs-root{
-  flex: 1 1 0;
-  min-width: 0;          /* критично */
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0;         /* уже было */
+  flex: 1 1 320px;        /* растягивается, но может ужаться до 320 px       */
+  min-width: 0;           /* (!) обязательно, иначе flex-элемент не сжимается*/
 }
 /* === Мобильная верстка (объединено) === */
 @media (max-width: 768px) {
@@ -380,15 +365,8 @@ a {
     padding: 10px 0;
   }
 
-  .chart-wrapper {
-    order: 1;
-
-    /* 1️⃣ Блок не должен расти выше 280 px */
+  .chart-wrapper{
     height: 280px;
     flex: 0 0 280px;
-
-    /* 2️⃣ И ничего наружу — библиотека может ставить width/height вручную */
-    overflow: visible;
-    position: relative;   /* для абсолютных внутренних плоскостей */
   }
 }
