@@ -1,4 +1,3 @@
-/* ========== БАЗА ========================================================== */
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -9,21 +8,24 @@ html, body, #root {
   -webkit-tap-highlight-color: transparent;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-a { color: #61dafb; }
+a {
+  color: #61dafb;
+}
 
-/* ---------- контейнер всего приложения ---------- */
+/* Контейнер приложения – фиксируем высоту */
 .app-container {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right)
-           env(safe-area-inset-bottom) env(safe-area-inset-left);
-  overflow: hidden;      /* чтобы график не вываливался за пределы */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow: hidden; /* Чтобы график не вываливался */
 }
 
-/* ========== ФОРМА ======================================================== */
+/* Форма */
 .form-row {
   display: flex;
   gap: 8px;
@@ -31,9 +33,10 @@ a { color: #61dafb; }
   background: #181818;
   flex-wrap: wrap;
   justify-content: space-between;
+  z-index: 2;           /* гарантируем, что форма сверху */
   position: relative;
-  z-index: 2;
 }
+
 .form-row label {
   display: flex;
   flex-direction: column;
@@ -41,8 +44,8 @@ a { color: #61dafb; }
   gap: 4px;
   min-width: 90px;
 }
-.form-row input,
-.form-row select {
+
+.form-row input, .form-row select {
   padding: 6px 8px;
   border: 1px solid #333;
   border-radius: 4px;
@@ -51,6 +54,7 @@ a { color: #61dafb; }
   font-size: 14px;
   width: 100%;
 }
+
 .form-row button {
   padding: 8px 12px;
   border: none;
@@ -61,32 +65,122 @@ a { color: #61dafb; }
   cursor: pointer;
   flex-grow: 1;
 }
-.form-row button:active { opacity: 0.8; }
 
-/* ========== ГРАФИК + ОСНОВНОЙ БЛОК ======================================= */
+.form-row button:active {
+  opacity: 0.8;
+}
+
+/* Обёртка графика */
+.chart-wrapper {
+  height: 100%;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  padding: 4px;
+  min-height: 300px;
+  border-top: 1px solid #333;
+}
+
+/* Контейнер, куда монтируем график */
+.chart-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Строка статуса снизу */
+.status-bar {
+  padding: 6px 10px;
+  font-size: 12px;
+  background: #181818;
+  border-top: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  z-index: 2;
+  position: relative;
+}
+
+/* ВРЕМЕННЫЕ ОТЛАДОЧНЫЕ РАМКИ (можете убрать позже) */
+.form-row, .status-bar, .chart-wrapper {
+  /* outline: 1px solid red;  */
+}
+
+.progress-wrapper {
+  padding: 8px 12px;
+  background: #181818;
+  border-top: 1px solid #333;
+}
+
+.progress-label {
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #ccc;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #333;
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  width: 35%;
+  background: linear-gradient(90deg, #6a5acd, #8a2be2);
+  animation: progressAnim 2s infinite linear;
+  opacity: 0.7;
+}
+
+@keyframes progressAnim {
+  0%   { transform: translateX(-35%); }
+  100% { transform: translateX(100%); }
+}
+
+.option-table-wrapper {
+  padding: 8px 12px;
+  background: #181818;
+  border-top: 1px solid #333;
+  font-size: 13px;
+}
+
+.option-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.option-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid #2a2a2a;
+  color: #ddd;
+}
+.option-table td:first-child {
+  color: #888;
+  width: 140px;
+}
+
+/* --- Разметка основного блока --- */
 .main-content {
   flex: 1;
   display: flex;
   overflow: hidden;
 }
 
-/* «рамка» вокруг canvas — размеры подтягиваем из flex-контекста */
 .chart-wrapper {
   flex: 1 1 auto;
   position: relative;
   overflow: hidden;
   padding: 4px;
+  min-height: 300px;
   border-top: 1px solid #333;
-  min-height: 300px;   /* desktop-минимум */
 }
 
-/* div, куда монтируется lightweight-charts */
-.chart-container {
-  width: 100%;
-  height: 100%;
-}
-
-/* ========== ПРАВАЯ ПАНЕЛЬ ================================================ */
+/* Правая панель */
 .stats-panel {
   width: 240px;
   min-width: 200px;
@@ -98,11 +192,6 @@ a { color: #61dafb; }
   gap: 8px;
   font-size: 13px;
 }
-.stats-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
 
 .stats-title {
   margin: 0 0 8px 0;
@@ -113,11 +202,14 @@ a { color: #61dafb; }
   align-items: center;
   gap: 6px;
 }
+
 .pos-dot {
-  width: 10px; height: 10px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   display: inline-block;
 }
+
 .stats-row {
   display: flex;
   justify-content: space-between;
@@ -130,98 +222,20 @@ a { color: #61dafb; }
   font-weight: 600;
 }
 
-/* ========== STATUS-BAR =================================================== */
-.status-bar {
-  padding: 6px 10px;
-  font-size: 12px;
-  background: #181818;
-  border-top: 1px solid #333;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-  position: relative;
-  z-index: 2;
-}
-
-/* ========== PROGRESS ===================================================== */
-.progress-wrapper {
-  padding: 8px 12px;
-  background: #181818;
-  border-top: 1px solid #333;
-}
-.progress-label {
-  font-size: 12px;
-  margin-bottom: 4px;
-  color: #ccc;
-}
-.progress-bar {
-  width: 100%;
-  height: 8px;
-  background: #333;
-  border-radius: 4px;
-  overflow: hidden;
-  position: relative;
-}
-.progress-fill-absolute {
-  position: absolute;
-  top: 0; left: 0;
-  height: 100%;
-  background: linear-gradient(90deg,#6a5acd,#8a2be2);
-  transition: width .4s ease;
-}
-
-/* ========== OPTIONS-TABLE =============================================== */
-.option-table-wrapper {
-  padding: 8px 12px;
-  background: #181818;
-  border-top: 1px solid #333;
-  font-size: 13px;
-}
-.option-table { width: 100%; border-collapse: collapse; }
-.option-table td {
-  padding: 4px 6px;
-  border-bottom: 1px solid #2a2a2a;
-  color: #ddd;
-}
-.option-table td:first-child { color: #888; width: 140px; }
-
-/* ========== FLASH-VAL (подсветка чисел) ================================== */
 .flash-val {
-  transition: transform .5s ease, background .5s ease;
+  transition: transform 0.5s ease, background 0.5s ease;
   padding: 0 4px;
   border-radius: 3px;
 }
-.flash-val.flash { transform: scale(1.15); }
-.flash-val.up   { background: rgba(0,255,0,.15); }
-.flash-val.down { background: rgba(255,0,0,.15); }
-
-/* ========== ВКЛАДКИ ====================================================== */
-.chart-tabs-header {
-  display: flex;
-  gap: 4px;
-  padding: 4px 6px;
-  background: #181818;
-  border-bottom: 1px solid #333;
-}
-.chart-tabs-header .tab {
-  padding: 4px 10px;
-  background: #222;
-  border: 1px solid #333;
-  border-bottom: none;
-  cursor: pointer;
-  font-size: 12px;
-  color: #ccc;
-  border-radius: 4px 4px 0 0;
-}
-.chart-tabs-header .tab.active {
-  background: #3a7afe;
-  color: #fff;
+.flash-val.flash {
+  transform: scale(1.15);         /* «подпрыгивание» */
 }
 
-/* ======================================================================== */
-/* ============================   МОБИЛЬНО   ============================== */
-/* ======================================================================== */
+/* фон по направлению */
+.flash-val.up   { background: rgba(0, 255,   0, 0.15); }
+.flash-val.down { background: rgba(255, 0,   0, 0.15); }
+
+/* Mobile: панель снизу */
 @media (max-width: 768px) {
   .main-content {
     flex-direction: column;
@@ -267,6 +281,44 @@ a { color: #61dafb; }
     padding: 10px 0;
   }
 }
+
+.progress-fill-static {
+  height: 100%;
+  background: linear-gradient(90deg, #6a5acd, #8a2be2);
+  transition: width 0.4s ease;
+}
+
+/* в App.css или отдельном файле */
+.progress-wrapper {
+  padding: 8px 12px;
+  background: #181818;
+  border-top: 1px solid #333;
+}
+
+.progress-label {
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #ccc;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill-absolute {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #6a5acd, #8a2be2);
+  transition: width 0.4s ease;
+}
+/* ========== МОБИЛЬНАЯ ВЕРСТКА ========== */
 @media (max-width: 768px) {
   /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */
   .main-content {
@@ -314,4 +366,48 @@ a { color: #61dafb; }
     overflow-y: auto;
     overflow-x: hidden;
   }
+}
+
+/* ─── Таблица статистики ─────────────────────────────────── */
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 4px 4px;
+}
+
+.stats-table .metric-cell {
+  text-align: left;
+  color: #ccc;
+}
+
+.stats-table .data-cell {
+  text-align: right;
+}
+
+/* вкладки графиков */
+.chart-tabs-header {
+  display: flex;
+  gap: 4px;
+  padding: 4px 6px;
+  background: #181818;
+  border-bottom: 1px solid #333;
+}
+.chart-tabs-header .tab {
+  padding: 4px 10px;
+  background: #222;
+  border: 1px solid #333;
+  border-bottom: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #ccc;
+  border-radius: 4px 4px 0 0;
+}
+.chart-tabs-header .tab.active {
+  background: #3a7afe;
+  color: #fff;
 }
