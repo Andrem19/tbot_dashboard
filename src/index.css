@@ -1,6 +1,7 @@
 /* === Базовая типографика и сброс === */
 html, body, #root {
   height: 100%;
+  width: 100%;
   margin: 0;
   padding: 0;
   background: #0f0f0f;
@@ -22,6 +23,7 @@ a {
 .app-container{
   overflow-x: hidden;
   overflow-y: auto;       /* вертикальный скролл на всём приложении          */
+  width: 100%;
 }
 
 /* === Форма === */
@@ -74,7 +76,8 @@ a {
 .chart-wrapper{
   /* было: height:100%  ― сбивало высоту, если родитель сам не фиксирован   */
   height: auto;
-  min-height: 300px;      /* safeguard, как и раньше                         */
+  min-height: 550px;      /* safeguard, как и раньше                         */
+  width: 100%;
 }
 
 .chart-container {
@@ -205,6 +208,7 @@ a {
                              строку, когда 240 px целиком не помещается      */
   border-left: 1px solid #333;
   border-top: none;       /* на десктопе бордер сверху не нужен              */
+  background:#181818 !important;
 }
 
 .stats-title {
@@ -297,16 +301,15 @@ a {
   color: #fff;
 }
 .chart-tabs-root{
-  flex: 1 1 320px;        /* растягивается, но может ужаться до 320 px       */
-  min-width: 0;           /* (!) обязательно, иначе flex-элемент не сжимается*/
+  flex: 1 1 0;              /* grow = 1,  basis = 0  → забирает остаток     */
+  min-width: 0;             /* важно, чтобы flex-элемент мог сжиматься      */
+  width: 0;                 /* Safari-fix: иначе width=min-content          */
 }
 /* === Мобильная верстка (объединено) === */
 @media (max-width: 768px) {
   /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */
-  .main-content {
-    flex-direction: column;
-    overflow: visible;          /* ничего не режем */
-    height: auto;               /* не фиксируем высоту */
+  .main-content{
+    flex-wrap: nowrap;      /* обратно в одну строку                        */
   }
 
   .stats-panel {
