@@ -209,13 +209,13 @@ export default function App() {
           positionsByCoin={positionsByCoin}
           onStatusChange={setChartStatus}
         />
-        {/* <StatsPanel
+        <StatsPanel
           stages={{
             first : stages.first  && { futPnl:stages.first.futPnl,  optPnl:stages.first.optPnl,  total:Number(stages.first.futPnl||0)+Number(stages.first.optPnl||0) },
             second: stages.second && { futPnl:stages.second.futPnl, optPnl:stages.second.optPnl, total:Number(stages.second.futPnl||0)+Number(stages.second.optPnl||0) },
           }}
           totals={totals}
-        /> */}
+        />
       </div>
 
       {/* прогресс-бары */}
@@ -233,7 +233,7 @@ export default function App() {
         );
       })}
 
-      {/* <OptionTable stages={stages} /> */}
+      <OptionTable stages={stages} />
 
       {/* нижняя строка */}
       <div className="status-bar">
