@@ -209,6 +209,8 @@ export default function App() {
             positionsByCoin={positionsByCoin}
             onStatusChange={setChartStatus}
           />
+
+      </div>
         <StatsPanel
           stages={{
             first : stages.first  && { futPnl:stages.first.futPnl,  optPnl:stages.first.optPnl,  total:Number(stages.first.futPnl||0)+Number(stages.first.optPnl||0) },
@@ -216,7 +218,6 @@ export default function App() {
           }}
           totals={totals}
         />
-      </div>
 
       {/* прогресс-бары */}
       {['first','second'].map(k => {
