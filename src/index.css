@@ -333,8 +333,8 @@ a {
     order: 1;
 
     /* 1️⃣ Блок не должен расти выше 280 px */
-    height: 280px;
-    flex: 0 0 280px;
+    height: 480px;
+    flex: 0 0 480px;
 
     /* 2️⃣ И ничего наружу — библиотека может ставить width/height вручную */
     overflow: hidden;
