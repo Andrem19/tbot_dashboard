@@ -7,20 +7,19 @@ function ChartWithData({ symbol, number_candles, interv, positions, reportStatus
   const { candles, loading, wsConnected, reconnect } =
     useBinanceKlines({ coin: symbol, number_candles, interv });
 
+  /* передаём состояние наверх (для строки статуса) */
   useEffect(() => {
     reportStatus({ coin: symbol, wsConnected, reconnect, candleCount: candles.length });
   }, [symbol, wsConnected, reconnect, candles.length, reportStatus]);
 
   return (
-    <div className="chart-wrapper">   {/* БЕЗ дополнительных flex-внуков */}
+    <div className="chart-wrapper" style={{ height: '100%' }}>
       {loading && <div style={{ padding: 8 }}>Loading…</div>}
       {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
       {!!candles.length && <Chart candles={candles} positions={positions} />}
     </div>
   );
 }
-
-
 
 /* ── вкладки ─────────────────────────────────────────────── */
 export default function ChartTabs({
@@ -47,13 +46,12 @@ export default function ChartTabs({
 
   return (
     <div
-      className="chart-tabs-root"
       style={{
-        flex: '1 1 auto',        // берём всё свободное место
+        flex: '1 1 0',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        minHeight: 0,
+        minHeight: 0,         /* критично! */
       }}
     >
       {/* заголовок вкладок (если монет > 1) */}

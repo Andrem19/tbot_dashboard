@@ -209,7 +209,6 @@ export default function App() {
           positionsByCoin={positionsByCoin}
           onStatusChange={setChartStatus}
         />
-        {/* на десктопе статистика справа, на мобилке пойдет ниже через CSS */}
         <StatsPanel
           stages={{
             first : stages.first  && { futPnl:stages.first.futPnl,  optPnl:stages.first.optPnl,  total:Number(stages.first.futPnl||0)+Number(stages.first.optPnl||0) },

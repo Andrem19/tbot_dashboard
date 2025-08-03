@@ -1,3 +1,4 @@
+/* === Базовая типографика и сброс === */
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -16,7 +17,7 @@ a {
   color: #61dafb;
 }
 
-/* Контейнер приложения – фиксируем высоту */
+/* === Контейнер приложения === */
 .app-container {
   height: 100vh;
   display: flex;
@@ -25,7 +26,7 @@ a {
   overflow: hidden; /* Чтобы график не вываливался */
 }
 
-/* Форма */
+/* === Форма === */
 .form-row {
   display: flex;
   gap: 8px;
@@ -45,7 +46,8 @@ a {
   min-width: 90px;
 }
 
-.form-row input, .form-row select {
+.form-row input,
+.form-row select {
   padding: 6px 8px;
   border: 1px solid #333;
   border-radius: 4px;
@@ -70,24 +72,23 @@ a {
   opacity: 0.8;
 }
 
-/* Обёртка графика */
+/* === Обёртка и контейнер графика === */
 .chart-wrapper {
-  height: 100%;
-  flex: 1;
+  flex: 1 1 auto;
   position: relative;
   overflow: hidden;
   padding: 4px;
   min-height: 300px;
   border-top: 1px solid #333;
+  height: 100%;
 }
 
-/* Контейнер, куда монтируем график */
 .chart-container {
   width: 100%;
   height: 100%;
 }
 
-/* Строка статуса снизу */
+/* === Строка статуса === */
 .status-bar {
   padding: 6px 10px;
   font-size: 12px;
@@ -101,11 +102,13 @@ a {
   position: relative;
 }
 
-/* ВРЕМЕННЫЕ ОТЛАДОЧНЫЕ РАМКИ (можете убрать позже) */
+/* === Временные отладочные рамки === */
 .form-row, .status-bar, .chart-wrapper {
   /* outline: 1px solid red;  */
 }
 
+/* === Прогресс === */
+/* Первая версия (в оригинале) */
 .progress-wrapper {
   padding: 8px 12px;
   background: #181818;
@@ -129,7 +132,8 @@ a {
 
 .progress-fill {
   position: absolute;
-  top: 0; left: 0;
+  top: 0;
+  left: 0;
   height: 100%;
   width: 35%;
   background: linear-gradient(90deg, #6a5acd, #8a2be2);
@@ -142,6 +146,34 @@ a {
   100% { transform: translateX(100%); }
 }
 
+/* Альтернативные/дополнительные варианты из повторов */
+.progress-fill-static {
+  height: 100%;
+  background: linear-gradient(90deg, #6a5acd, #8a2be2);
+  transition: width 0.4s ease;
+}
+
+/* Вторая версия (в оригинале) */
+.progress-bar {
+  /* Обратите внимание: перепределяет некоторые свойства, как в исходнике */
+  width: 100%;
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill-absolute {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #6a5acd, #8a2be2);
+  transition: width 0.4s ease;
+}
+
+/* === Опционная таблица === */
 .option-table-wrapper {
   padding: 8px 12px;
   background: #181818;
@@ -159,28 +191,20 @@ a {
   border-bottom: 1px solid #2a2a2a;
   color: #ddd;
 }
+
 .option-table td:first-child {
   color: #888;
   width: 140px;
 }
 
-/* --- Разметка основного блока --- */
+/* === Основной блок === */
 .main-content {
   flex: 1;
   display: flex;
   overflow: hidden;
 }
 
-.chart-wrapper {
-  flex: 1 1 auto;
-  position: relative;
-  overflow: hidden;
-  padding: 4px;
-  min-height: 300px;
-  border-top: 1px solid #333;
-}
-
-/* Правая панель */
+/* === Правая панель === */
 .stats-panel {
   width: 240px;
   min-width: 200px;
@@ -218,6 +242,7 @@ a {
   border-bottom: 1px solid #2a2a2a;
   color: #ddd;
 }
+
 .stats-row.total {
   font-weight: 600;
 }
@@ -227,6 +252,7 @@ a {
   padding: 0 4px;
   border-radius: 3px;
 }
+
 .flash-val.flash {
   transform: scale(1.15);         /* «подпрыгивание» */
 }
@@ -235,135 +261,7 @@ a {
 .flash-val.up   { background: rgba(0, 255,   0, 0.15); }
 .flash-val.down { background: rgba(255, 0,   0, 0.15); }
 
-/* Mobile: панель снизу */
-@media (max-width: 768px) {
-  .main-content {
-    flex-direction: column;
-  }
-  .stats-panel {
-    width: 100%;
-    border-left: none;
-    border-top: 1px solid #333;
-  }
-  .form-row {
-    gap: 6px;
-    padding: 6px;
-  }
-
-  /* каждая «пара» описание‑поле занимает половину ширины,
-     чтобы влезать по две в строку */
-  .form-row label {
-    flex: 1 1 calc(50% - 6px);
-    min-width: 0;
-    font-size: 11px;
-  }
-
-  .form-row input,
-  .form-row select {
-    padding: 4px 6px;
-    font-size: 12px;
-  }
-
-  /* чек‑боксы идут компактно, по содержимому */
-  .form-row label.checkbox {
-    flex: 0 0 auto;
-    flex-direction: row;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    min-width: unset;
-  }
-
-  /* кнопка растягивается на всю ширину отдельной строки */
-  .form-row button {
-    flex: 1 1 100%;
-    margin-top: 2px;
-    padding: 10px 0;
-  }
-}
-
-.progress-fill-static {
-  height: 100%;
-  background: linear-gradient(90deg, #6a5acd, #8a2be2);
-  transition: width 0.4s ease;
-}
-
-/* в App.css или отдельном файле */
-.progress-wrapper {
-  padding: 8px 12px;
-  background: #181818;
-  border-top: 1px solid #333;
-}
-
-.progress-label {
-  font-size: 12px;
-  margin-bottom: 4px;
-  color: #ccc;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 8px;
-  background: #333;
-  border-radius: 4px;
-  overflow: hidden;
-  position: relative;
-}
-
-.progress-fill-absolute {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: linear-gradient(90deg, #6a5acd, #8a2be2);
-  transition: width 0.4s ease;
-}
-/* ========== МОБИЛЬНАЯ ВЕРСТКА ========== */
-@media (max-width: 768px) {
-  /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */
-  /* основной поток: график, потом опционы, потом статистика */
-  .main-content {
-    display: block; /* снимаем flex-сложности */
-    height: auto;
-    overflow: visible;
-  }
-
-  /* график — минимум половина экрана, реально занимает столько, сколько нужно */
-  .chart-wrapper {
-    min-height: 50vh;
-    height: auto !important;
-    overflow: hidden;
-    position: relative;
-    order: unset; /* сбрасываем, если было */
-    flex: unset;
-  }
-
-  /* опционная таблица сразу после графика */
-  .option-table-wrapper {
-    width: 100%;
-    margin-top: 8px;
-    position: relative;
-    z-index: auto;
-  }
-
-  /* статистика — после всего сверху не накладывается */
-  .stats-panel {
-    width: 100%;
-    border-left: none;
-    border-top: 1px solid #333;
-    position: relative;
-    z-index: auto;
-    margin-top: 0;
-  }
-
-  /* контейнер всего приложения — разрешаем вертикальный скролл */
-  .app-container {
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-}
-
-/* ─── Таблица статистики ─────────────────────────────────── */
+/* === Таблица статистики === */
 .stats-table {
   width: 100%;
   border-collapse: collapse;
@@ -384,7 +282,7 @@ a {
   text-align: right;
 }
 
-/* вкладки графиков */
+/* === Вкладки графиков === */
 .chart-tabs-header {
   display: flex;
   gap: 4px;
@@ -392,6 +290,7 @@ a {
   background: #181818;
   border-bottom: 1px solid #333;
 }
+
 .chart-tabs-header .tab {
   padding: 4px 10px;
   background: #222;
@@ -402,7 +301,90 @@ a {
   color: #ccc;
   border-radius: 4px 4px 0 0;
 }
+
 .chart-tabs-header .tab.active {
   background: #3a7afe;
   color: #fff;
+}
+
+/* === Мобильная верстка (объединено) === */
+@media (max-width: 768px) {
+  /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */
+  .main-content {
+    flex-direction: column;
+    overflow: visible;          /* ничего не режем */
+    height: auto;               /* не фиксируем высоту */
+  }
+
+  .stats-panel {
+    order: 2;
+    width: 100%;
+    flex: 0 0 auto;
+    border-left: none;
+    border-top: 1px solid #333;
+    position: relative;
+    z-index: 2;                 /* поверх всего остального */
+  }
+
+  .option-table-wrapper {
+    order: 3;
+    flex: 0 0 auto;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+    margin-top: 8px;
+  }
+
+  .app-container {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .main-content {
+    flex-direction: column;
+  }
+
+  .form-row {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .form-row label {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+    font-size: 11px;
+  }
+
+  .form-row input,
+  .form-row select {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  .form-row label.checkbox {
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    min-width: unset;
+  }
+
+  .form-row button {
+    flex: 1 1 100%;
+    margin-top: 2px;
+    padding: 10px 0;
+  }
+
+  .chart-wrapper {
+    order: 1;
+
+    /* 1️⃣ Блок не должен расти выше 280 px */
+    height: 280px;
+    flex: 0 0 280px;
+
+    /* 2️⃣ И ничего наружу — библиотека может ставить width/height вручную */
+    overflow: hidden;
+    position: relative;   /* для абсолютных внутренних плоскостей */
+  }
 }
