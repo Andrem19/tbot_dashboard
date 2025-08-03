@@ -321,38 +321,39 @@ a {
 /* ========== МОБИЛЬНАЯ ВЕРСТКА ========== */
 @media (max-width: 768px) {
   /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */
+  /* основной поток: график, потом опционы, потом статистика */
   .main-content {
-    flex-direction: column;
-    overflow: visible;          /* ничего не режем */
-    height: auto;               /* не фиксируем высоту */
+    display: block; /* снимаем flex-сложности */
+    height: auto;
+    overflow: visible;
   }
 
-  /* график пусть занимает ровно то, что нужно */
-
+  /* график — минимум половина экрана, реально занимает столько, сколько нужно */
   .chart-wrapper {
-    order: 1;
-    flex: 1 1 auto;         /* тянемся сколько дадут */
-    min-height: 50vh;       /* но не меньше половины экрана */
+    min-height: 50vh;
     height: auto !important;
     overflow: hidden;
     position: relative;
+    order: unset; /* сбрасываем, если было */
+    flex: unset;
   }
-  /* панель со статистикой сразу под графиком */
-  .stats-panel {
-    order: 3;
-    /* … */
+
+  /* опционная таблица сразу после графика */
+  .option-table-wrapper {
+    width: 100%;
+    margin-top: 8px;
     position: relative;
     z-index: auto;
   }
 
-  /* таблица опциона ниже панели статистики */
-  .option-table-wrapper {
-    order: 2;
-    flex: 0 0 auto;
+  /* статистика — после всего сверху не накладывается */
+  .stats-panel {
     width: 100%;
+    border-left: none;
+    border-top: 1px solid #333;
     position: relative;
     z-index: auto;
-    margin-top: 8px;
+    margin-top: 0;
   }
 
   /* контейнер всего приложения — разрешаем вертикальный скролл */
