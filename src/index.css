@@ -23,7 +23,6 @@ a {
   overflow-x: hidden;
   overflow-y: auto;       /* вертикальный скролл на всём приложении          */
 }
-
 /* === Форма === */
 .form-row {
   display: flex;
@@ -75,7 +74,6 @@ a {
   /* было: height:100%  ― сбивало высоту, если родитель сам не фиксирован   */
   height: auto;
   min-height: 300px;      /* safeguard, как и раньше                         */
-  width: 100%;
 }
 
 .chart-container {
@@ -199,7 +197,6 @@ a {
   overflow: visible;      /* ничего не обрезаем                              */
   row-gap: 0;             /* чтобы не было лишних «щелей»                    */
 }
-
 /* === Правая панель === */
 .stats-panel{
   flex: 0 0 240px;        /* фикс 240 px, НЕ сжимается, но «прыгает» на новую
@@ -298,9 +295,8 @@ a {
   color: #fff;
 }
 .chart-tabs-root{
-  flex: 1 1 0;              /* grow = 1,  basis = 0  → забирает остаток     */
-  min-width: 0;             /* важно, чтобы flex-элемент мог сжиматься      */
-  width: 0;                 /* Safari-fix: иначе width=min-content          */
+  flex: 1 1 320px;        /* растягивается, но может ужаться до 320 px       */
+  min-width: 0;           /* (!) обязательно, иначе flex-элемент не сжимается*/
 }
 /* === Мобильная верстка (объединено) === */
 @media (max-width: 768px) {
