@@ -342,7 +342,7 @@ a {
     order: 2;
     /* … */
     position: relative;
-    z-index: auto;
+    z-index: 1;
   }
 
   /* таблица опциона ниже панели статистики */
