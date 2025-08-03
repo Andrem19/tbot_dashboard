@@ -202,7 +202,7 @@ export default function App() {
 
       {/* контент */}
       <div className="main-content">
-        <div className="chart-wrapper">
+        <div>
           <ChartTabs
             coins={tabCoins}
             number_candles={settings.number_candles}
