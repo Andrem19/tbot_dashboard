@@ -13,10 +13,12 @@ function ChartWithData({ symbol, number_candles, interv, positions, reportStatus
   }, [symbol, wsConnected, reconnect, candles.length, reportStatus]);
 
   return (
+    <div className="chart-wrapper">
     <div>
       {loading && <div style={{ padding: 8 }}>Loading…</div>}
       {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
       {!!candles.length && <Chart candles={candles} positions={positions} />}
+    </div>
     </div>
   );
 }
