@@ -74,7 +74,7 @@ a {
 .chart-wrapper{
   /* было: height:100%  ― сбивало высоту, если родитель сам не фиксирован   */
   height: auto;
-  min-height: 300px;      /* safeguard, как и раньше                         */
+  min-height: 550px;      /* safeguard, как и раньше                         */
 }
 
 .chart-container {
@@ -205,6 +205,7 @@ a {
                              строку, когда 240 px целиком не помещается      */
   border-left: 1px solid #333;
   border-top: none;       /* на десктопе бордер сверху не нужен              */
+  background:#181818 !important;
 }
 
 .stats-title {
