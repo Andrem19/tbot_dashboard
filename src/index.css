@@ -253,7 +253,7 @@ a { color: #61dafb; }
     padding: 10px 0;
   }
 
-  /* --- график ---
+  /* --- график --- */
   .chart-wrapper {
     order: 1;
     height: 60vh;
@@ -261,7 +261,7 @@ a { color: #61dafb; }
     flex: 0 0 auto;
     position: relative;
     overflow: hidden;
-  } */
+  }
 
   /* --- статистика под графиком --- */
   .stats-panel {

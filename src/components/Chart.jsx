@@ -24,8 +24,14 @@ export default function Chart({ candles, positions = [] }) {
     if (!el || !ch) return;
     el.style.width = '100%';
     el.style.height = '100%';
-    const { width, height } = el.getBoundingClientRect(); // <- важно: берём сам контейнер, не parent
-    if (width && height) ch.resize(width, height);
+    // Берём габариты самой .chart-wrapper, а не внутренней .chart-container
+    let wrapper = el;                                // .chart-container
+    while (wrapper && !wrapper.classList.contains('chart-wrapper')) {
+      wrapper = wrapper.parentElement;
+    }
+    const { width, height } =
+   (wrapper || el).getBoundingClientRect();       // всегда есть 60 vh / 360 px
+    if (width > 0 && height > 0) ch.resize(width, height);
   };
 
 /* ——— инициализация ——— */

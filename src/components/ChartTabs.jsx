@@ -12,20 +12,14 @@ function ChartWithData({ symbol, number_candles, interv, positions, reportStatus
   }, [symbol, wsConnected, reconnect, candles.length, reportStatus]);
 
   return (
-    <div
-      className="chart-wrapper"
-      style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column' }}
-    >
+    <div className="chart-wrapper">   {/* БЕЗ дополнительных flex-внуков */}
       {loading && <div style={{ padding: 8 }}>Loading…</div>}
       {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
-      {!!candles.length && (
-        <div style={{ flex: '1 1 0', minHeight: 0, position: 'relative' }}>
-          <Chart candles={candles} positions={positions} />
-        </div>
-      )}
+      {!!candles.length && <Chart candles={candles} positions={positions} />}
     </div>
   );
 }
+
 
 
 /* ── вкладки ─────────────────────────────────────────────── */
