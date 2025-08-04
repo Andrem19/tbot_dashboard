@@ -119,8 +119,11 @@ export default function Chart({ candles, positions = [] }) {
       resizeChart(); // подгоняем один раз
     } else {
       const diff = data.length - prevLen.current;
-      if (diff > 0) data.slice(-diff).forEach(series.update);
-      else series.update(data.at(-1));
+      if (diff > 0) {
+        data.slice(-diff).forEach(b => series.update(b));
+      } else {
+        series.update(data.at(-1));
+      }
       prevLen.current = data.length;
     }
 
