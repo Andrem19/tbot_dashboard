@@ -177,6 +177,12 @@ export default function App() {
     reconnect: () => {},
   });
 
+    useEffect(() => {
+    if (chartStatus.coin && chartStatus.coin !== form.coin) {
+      setForm((prev) => ({ ...prev, coin: chartStatus.coin }));
+    }
+  }, [chartStatus.coin, form.coin]);
+
   /* ─── JSX ──────────────────────────────────────────────── */
   return (
     <div className="app-container">

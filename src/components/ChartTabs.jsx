@@ -1,27 +1,37 @@
+// src/components/ChartTabs.jsx
 import { useEffect, useRef, useState } from 'react';
 import Chart from './Chart.jsx';
 import { useBinanceKlines } from '../hooks';
 
-/* ── график + WebSocket ─────────────────────────────────── */
+/* ── График + WebSocket ───────────────────────────────────── */
 function ChartWithData({ symbol, number_candles, interv, positions, reportStatus }) {
-  const { candles, loading, wsConnected, reconnect } =
-    useBinanceKlines({ coin: symbol, number_candles, interv });
+  const {
+    candles,
+    loading,
+    wsConnected,
+    reconnect,
+  } = useBinanceKlines({ coin: symbol, number_candles, interv });
 
   /* передаём состояние наверх (для строки статуса) */
   useEffect(() => {
-    reportStatus({ coin: symbol, wsConnected, reconnect, candleCount: candles.length });
+    reportStatus({
+      coin: symbol,
+      wsConnected,
+      reconnect,
+      candleCount: candles.length,
+    });
   }, [symbol, wsConnected, reconnect, candles.length, reportStatus]);
 
   return (
-      <div className="chart-wrapper">
-        {loading && <div style={{ padding: 8 }}>Loading…</div>}
-        {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
-        {!!candles.length && <Chart candles={candles} positions={positions} />}
-      </div>
+    <div className="chart-wrapper">
+      {loading && <div style={{ padding: 8 }}>Loading…</div>}
+      {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
+      {candles.length > 0 && <Chart candles={candles} positions={positions} />}
+    </div>
   );
 }
 
-/* ── вкладки ─────────────────────────────────────────────── */
+/* ── Вкладки ──────────────────────────────────────────────── */
 export default function ChartTabs({
   coins = [],
   number_candles,
@@ -29,16 +39,27 @@ export default function ChartTabs({
   positionsByCoin = {},
   onStatusChange,
 }) {
+  /* активную вкладку храним отдельно и СИНХРОНИЗИРУЕМ с coins  */
   const [active, setActive] = useState(coins[0] || '');
   const lastStatuses = useRef({});
 
-  /* принимаем отчёты от вложенных графиков */
+  /* если набор coins изменился, а текущий active там не найден —
+     выбираем первую доступную монету */
+  useEffect(() => {
+    if (!coins.includes(active)) {
+      setActive(coins[0] || '');
+    }
+  }, [coins, active]);
+
+  /* принимаем отчёты от дочерних графиков */
   const handleReport = (st) => {
     lastStatuses.current[st.coin] = st;
-    if (st.coin === active) onStatusChange(st);
+    if (st.coin === active) {
+      onStatusChange(st);
+    }
   };
 
-  /* переключение вкладок → обновляем нижнюю строку */
+  /* смена active → обновляем строку статуса */
   useEffect(() => {
     const st = lastStatuses.current[active];
     if (st) onStatusChange(st);
@@ -61,12 +82,12 @@ export default function ChartTabs({
         </div>
       )}
 
-      {/* контейнер для самих графиков */}
+      {/* контейнер с графиками */}
       <div
         style={{
           flex: '1 1 0',
           position: 'relative',
-          minHeight: 0,        /* даём право сжиматься */
+          minHeight: 0, // разрешаем flex-сжатие
         }}
       >
         {coins.map((c) => (

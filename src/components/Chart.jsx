@@ -1,3 +1,4 @@
+// src/components/Chart.jsx
 import { useEffect, useRef } from 'react';
 import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
 
@@ -7,125 +8,146 @@ import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
  *   positions – [{ key, visible, entryPx, sl, tp, qty, colors, openTime }]
  */
 export default function Chart({ candles, positions = [] }) {
-  const containerRef   = useRef(null);
-  const chartRef       = useRef(null);
-  const seriesRef      = useRef(null);
-  const userAtRightRef = useRef(true);
-  const fitDoneRef     = useRef(false);
-  const prevLenRef     = useRef(0);
-  const prevFirstRef   = useRef(null);
-  const linesRef       = useRef([]);
-  const markersRef     = useRef([]);
+  const containerRef = useRef(null);
+  const chartRef     = useRef(null);
+  const seriesRef    = useRef(null);
 
-  /* ——— helper: возвращаем контейнеру «нормальный» размер ——— */
-  const normalizeSize = () => {
+  const prevLen   = useRef(0);
+  const prevFirst = useRef(null);
+  const fitDone   = useRef(false);
+  const userAtEnd = useRef(true);
+
+  const priceLines = useRef([]);
+  const markersRef = useRef([]);
+
+  /* ——— подгоняем размер под фактическую высоту .chart-wrapper ——— */
+  const resizeChart = () => {
     const el = containerRef.current;
-    const ch = chartRef.current;
-    if (!el || !ch) return;
-    el.style.width = '100%';
-    el.style.height = '100%';
-    // Берём габариты самой .chart-wrapper, а не внутренней .chart-container
-    let wrapper = el;                                // .chart-container
-    while (wrapper && !wrapper.classList.contains('chart-wrapper')) {
-      wrapper = wrapper.parentElement;
+    const chart = chartRef.current;
+    if (!el || !chart) return;
+
+    // .chart-wrapper — ближайший родитель по классу
+    let wrap = el;
+    while (wrap && !wrap.classList.contains('chart-wrapper')) {
+      wrap = wrap.parentElement;
     }
-    const { width, height } =
-   (wrapper || el).getBoundingClientRect();       // всегда есть 60 vh / 360 px
-    if (width > 0 && height > 0) ch.resize(width, height);
+    const target = wrap || el;
+    const { width, height } = target.getBoundingClientRect();
+    if (width > 0 && height > 0) chart.resize(width, height);
   };
 
-/* ——— инициализация ——— */
-useEffect(() => {
-  const el = containerRef.current;
-  if (!el) return;
-  const chart = createChart(el, {
-    layout: { background: { color: '#0f0f0f' }, textColor: '#d1d4dc' },
-    grid: { vertLines: { color: '#2B2B43' }, horzLines: { color: '#2B2B43' } },
-    crosshair: { mode: CrosshairMode.Normal },
-    rightPriceScale: { borderVisible: false },
-    timeScale: { borderVisible: false, timeVisible: true, rightOffset: 10, barSpacing: 6 },
-    handleScroll: { mouseWheel: true, pressedMouseMove: true },
-    handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
-  });
-  const series = chart.addCandlestickSeries({
-    upColor: '#26a69a',
-    downColor: '#ef5350',
-    wickUpColor: '#26a69a',
-    wickDownColor: '#ef5350',
-    borderVisible: false,
-    priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
-  });
-  chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
-    userAtRightRef.current = chart.timeScale().scrollPosition() === 0;
-  });
-  chartRef.current = chart;
-  seriesRef.current = series;
+  /* ——— инициализация ——— */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-  normalizeSize(); // первый раз
+    // контейнеру нужны 100 % ширины/высоты, но этого достаточно один раз
+    el.style.width  = '100%';
+    el.style.height = '100%';
 
-  // Следим за изменением размера контейнера
-  const resizeObserver = new ResizeObserver(() => {
-    normalizeSize();
-  });
-  resizeObserver.observe(el);
+    const chart = createChart(el, {
+      layout: { background: { color: '#0f0f0f' }, textColor: '#d1d4dc' },
+      grid:   { vertLines: { color: '#2B2B43' }, horzLines: { color: '#2B2B43' } },
+      crosshair: { mode: CrosshairMode.Normal },
+      rightPriceScale: { borderVisible: false },
+      timeScale: {
+        borderVisible: false,
+        timeVisible  : true,
+        rightOffset  : 10,
+        barSpacing   : 6,
+      },
+      handleScroll: { mouseWheel: true, pressedMouseMove: true },
+      handleScale : { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+    });
 
-  // ориентация и прочие внешние события
-  window.addEventListener('orientationchange', normalizeSize);
+    const series = chart.addCandlestickSeries({
+      upColor      : '#26a69a',
+      downColor    : '#ef5350',
+      wickUpColor  : '#26a69a',
+      wickDownColor: '#ef5350',
+      borderVisible: false,
+      priceFormat  : { type: 'price', precision: 2, minMove: 0.01 },
+    });
 
-  return () => {
-    resizeObserver.disconnect();
-    window.removeEventListener('orientationchange', normalizeSize);
-    chart.remove();
-  };
-}, []);
+    chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+      userAtEnd.current = chart.timeScale().scrollPosition() === 0;
+    });
 
-  /* ——— свечи ——— */
+    chartRef.current  = chart;
+    seriesRef.current = series;
+
+    /* реагируем только на resize/orientationchange окна — никаких observer-ов */
+    window.addEventListener('resize', resizeChart);
+    window.addEventListener('orientationchange', resizeChart);
+
+    resizeChart(); // первый раз
+
+    return () => {
+      window.removeEventListener('resize', resizeChart);
+      window.removeEventListener('orientationchange', resizeChart);
+      chart.remove();
+    };
+  }, []);
+
+  /* ——— обновляем свечи ——— */
   useEffect(() => {
     const chart  = chartRef.current;
     const series = seriesRef.current;
     if (!chart || !series || candles.length === 0) return;
 
-    const data = candles.map(c => ({ time:c.time, open:c.open, high:c.high, low:c.low, close:c.close }));
+    const data = candles.map(c => ({
+      time : c.time,
+      open : c.open,
+      high : c.high,
+      low  : c.low,
+      close: c.close,
+    }));
+
     const first = data[0]?.time ?? null;
     const needReset =
-      !fitDoneRef.current ||
-      prevFirstRef.current == null ||
-      prevFirstRef.current !== first ||
-      data.length < prevLenRef.current;
+      !fitDone.current ||
+      prevFirst.current == null ||
+      prevFirst.current !== first ||
+      data.length < prevLen.current;
 
     if (needReset) {
       series.setData(data);
       chart.timeScale().fitContent();
-      fitDoneRef.current = true;
-      prevLenRef.current = data.length;
-      prevFirstRef.current = first;
-      normalizeSize();        // библиотека перезаписала inline-hw → чистим
+      fitDone.current  = true;
+      prevLen.current  = data.length;
+      prevFirst.current = first;
+      resizeChart(); // подгоняем один раз
     } else {
-      const diff = data.length - prevLenRef.current;
-      if (diff > 0) data.slice(-diff).forEach(b => series.update(b));
+      const diff = data.length - prevLen.current;
+      if (diff > 0) data.slice(-diff).forEach(series.update);
       else series.update(data.at(-1));
-      prevLenRef.current = data.length;
+      prevLen.current = data.length;
     }
 
-    if (userAtRightRef.current) chart.timeScale().scrollToRealTime();
+    if (userAtEnd.current) chart.timeScale().scrollToRealTime();
   }, [candles]);
 
   /* ——— ценовые линии ——— */
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
-
-    linesRef.current.forEach(l => { try { series.removePriceLine(l); } catch {} });
-    linesRef.current = [];
+    priceLines.current.forEach(l => { try { series.removePriceLine(l); } catch {} });
+    priceLines.current = [];
 
     positions.forEach(p => {
       if (!p.visible) return;
       const add = (price, color, title) => {
         if (price == null) return;
-        linesRef.current.push(series.createPriceLine({
-          price, color, lineWidth:2, lineStyle:LineStyle.Dashed,
-          axisLabelVisible:true, title,
-        }));
+        priceLines.current.push(
+          series.createPriceLine({
+            price,
+            color,
+            lineWidth: 2,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title,
+          }),
+        );
       };
       add(p.entryPx, p.colors.entry, `${p.key} ${p.qty ?? ''}`.trim());
       add(p.sl,      p.colors.sl,    `${p.key} SL`);
@@ -147,38 +169,23 @@ useEffect(() => {
 
     positions.forEach(p => {
       if (!p.visible || !p.openTime) return;
-
       let closest = times[0], min = Math.abs(p.openTime - times[0]);
       for (let i = 1; i < times.length; i++) {
         const d = Math.abs(p.openTime - times[i]);
         if (d < min) { min = d; closest = times[i]; }
       }
-
       markers.push({
         time: closest,
-        position:'aboveBar',
-        color:p.colors.entry,
-        shape:'arrowDown',
-        text:'',
+        position: 'aboveBar',
+        color: p.colors.entry,
+        shape: 'arrowDown',
+        text: '',
       });
     });
 
     if (markers.length) series.setMarkers(markers);
     markersRef.current = markers;
   }, [positions, candles]);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver(() => {
-      normalizeSize();
-    });
-    observer.observe(containerRef.current.parentElement);
-    window.addEventListener('orientationchange', normalizeSize);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('orientationchange', normalizeSize);
-    };
-  }, []);
 
   return <div ref={containerRef} className="chart-container" />;
 }
