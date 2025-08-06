@@ -32,31 +32,31 @@ export default function SimulationTable({ positions = null, updatedAt = null }) 
     { label: 'PnL', key: 'pnl', fmt: (v) => v.toFixed(2), flash: true },
     { label: 'Symbol',        key: 'symbol' },
     { label: 'Ask',           key: 'ask',          fmt: (v) => v.toFixed(2) },
+    { label: 'Ask original',  key: 'askOriginal',  fmt: (v) => v.toFixed(2) },    
+    { label: 'Target bid',    key: 'bestTargBid',  fmt: (v) => v.toFixed(2) },
+    { label: 'PnL upper',     key: 'pnlUpper',     fmt: (v) => v.toFixed(2) },
+    { label: 'p_t',           key: 'pt',           fmt: (v) => v.toFixed(2) },
+    {
+      label: 'Strike %',
+      key: 'strikePerc',
+      fmt: (v) => v.toFixed(4),
+    },
+    {
+      label: 'Lower %',
+      key: 'lowerPerc',
+      fmt: (v) => v.toFixed(4),
+    },
+    {
+      label: 'Upper %',
+      key: 'upperPerc',
+      fmt: (v) => v.toFixed(4),
+    },
+    { label: 'Max amount',    key: 'maxAmount' },
     {
       label: 'Ask indicators',
       key: 'askIndicators',
       fmt: (v) =>
         Array.isArray(v) ? v.map((n) => n.toFixed(2)).join(' / ') : '-',
-    },
-    { label: 'Ask original',  key: 'askOriginal',  fmt: (v) => v.toFixed(2) },
-    { label: 'Target bid',    key: 'bestTargBid',  fmt: (v) => v.toFixed(2) },
-    { label: 'PnL upper',     key: 'pnlUpper',     fmt: (v) => v.toFixed(2) },
-    { label: 'p_t',           key: 'pt',           fmt: (v) => v.toFixed(2) },
-    { label: 'Max amount',    key: 'maxAmount' },
-    {
-      label: 'Strike %',
-      key: 'strikePerc',
-      fmt: (v) => (v * 100).toFixed(2) + '%',
-    },
-    {
-      label: 'Lower %',
-      key: 'lowerPerc',
-      fmt: (v) => (v * 100).toFixed(2) + '%',
-    },
-    {
-      label: 'Upper %',
-      key: 'upperPerc',
-      fmt: (v) => (v * 100).toFixed(2) + '%',
     },
   ];
 
