@@ -6,91 +6,161 @@
         "amount": 2,
         "base_coin": "ETH",
         "exist": true,
-        "expect": 0.15,
-        "lower_perc": 0.0523086332797721,
-        "over_strike": 0.03,
+        "expect": 0.2,
+        "lower_perc": 0.06342316000318429,
+        "over_strike": 0.04,
         "position": {
           "exist": true,
           "leg": {
             "contracts": 0.1,
-            "deliveryTime": 1754380800000,
+            "deliveryTime": 1754553600000,
             "exist": true,
-            "hours_to_exp": 22.675026239818997,
+            "hours_to_exp": 19.571774859444446,
             "info": {
-              "avgPrice": 11.4,
-              "curRealisedPnl": -0.0798,
-              "markPrice": 11.58477594,
-              "max_size": 32.1,
-              "positionValue": 1.15847759,
+              "avgPrice": 13.6,
+              "curRealisedPnl": -0.0952,
+              "markPrice": 20.83190295,
+              "max_size": 29.2,
+              "positionValue": 2.08319029,
               "side": "Buy",
               "size": 0.1,
-              "symbol": "ETH-5AUG25-3475-P-USDT",
-              "unrealisedPnl": -0.009999999999999966,
-              "used_bid": 11.3
+              "symbol": "ETH-7AUG25-3550-P-USDT",
+              "unrealisedPnl": 0.73,
+              "used_bid": 20.9
             },
-            "name": "ETH-5AUG25-3475-P-USDT",
-            "tp_id": "hedgeTP-f3f439f96e9f455ca6"
+            "name": "ETH-7AUG25-3550-P-USDT",
+            "tp_id": "hedgeTP-98073eaca62f4b16b4"
           },
-          "open_time": "2025-08-04 09:15:27.480000+00:00",
-          "pnl_target": 3.239034894039725,
+          "open_time": "2025-08-06 08:00:56.673000+00:00",
+          "pnl_target": 3.512037214144196,
           "position_info": {
-            "entryPx": 3553.4,
-            "positionValue": 196.90822,
+            "entryPx": 3636.1,
+            "positionValue": 166.41146,
             "side": 1,
-            "size": 0.0554,
-            "unrealizedPnl": 0.04986
+            "size": 0.0463,
+            "unrealizedPnl": -1.933487999999989
           }
         },
-        "rel_atr": 0.0081,
-        "rsi": 63.91,
-        "to_exp_init": 22.75,
-        "upper_perc": 0.030000000000000075
+        "rel_atr": 0.0093,
+        "rsi": 56.07,
+        "to_exp_init": 23.99,
+        "upper_perc": 0.030000000000000047
       },
       "second": {
         "amount": 4,
         "base_coin": "ETH",
         "exist": true,
-        "expect": 0.3,
-        "lower_perc": 0.044802032414736605,
-        "over_strike": 0.03,
+        "expect": 0.4,
+        "lower_perc": 0.062411128671421325,
+        "over_strike": 0.04,
         "position": {
           "exist": true,
           "leg": {
             "contracts": 0.2,
-            "deliveryTime": 1754380800000,
+            "deliveryTime": 1754553600000,
             "exist": true,
-            "hours_to_exp": 22.674418902132246,
+            "hours_to_exp": 19.571774851111112,
             "info": {
-              "avgPrice": 17,
-              "curRealisedPnl": -0.21331894,
-              "markPrice": 16.79239916,
-              "max_size": 31.6,
-              "positionValue": 3.35847983,
+              "avgPrice": 10.4,
+              "curRealisedPnl": -0.1456,
+              "markPrice": 20.98673419,
+              "max_size": 29.2,
+              "positionValue": 4.19734683,
               "side": "Buy",
               "size": 0.2,
-              "symbol": "ETH-5AUG25-3500-P-USDT",
-              "unrealisedPnl": -0.16000000000000014,
-              "used_bid": 16.2
+              "symbol": "ETH-7AUG25-3550-P-USDT",
+              "unrealisedPnl": 2.0999999999999996,
+              "used_bid": 20.9
             },
-            "name": "ETH-5AUG25-3500-P-USDT",
-            "tp_id": "hedgeTP-7b7d22d33fd94c30a6"
+            "name": "ETH-7AUG25-3550-P-USDT",
+            "tp_id": "hedgeTP-3274c74ce5fc4ad486"
           },
-          "open_time": "2025-08-04 09:18:53.346000+00:00",
-          "pnl_target": 6.142628560226268,
+          "open_time": "2025-08-06 09:20:33.469000+00:00",
+          "pnl_target": 7.966837616983775,
           "position_info": {
-            "entryPx": 3554,
-            "positionValue": 395.59359,
+            "entryPx": 3632.7,
+            "positionValue": 345.0432,
             "side": 1,
-            "size": 0.1113,
-            "unrealizedPnl": 0.03339
+            "size": 0.096,
+            "unrealizedPnl": -3.6825599999999685
           }
         },
-        "rel_atr": 0.0081,
-        "rsi": 63.34,
-        "to_exp_init": 22.69,
-        "upper_perc": 0.03000000000000003
+        "rel_atr": 0.0097,
+        "rsi": 55.11,
+        "to_exp_init": 22.66,
+        "upper_perc": 0.030000000000000037
+      },
+      "simulation": {
+        "atr": [
+          34,
+          0.00959
+        ],
+        "last_px": 3596.95,
+        "position_1": {
+          "ask": 0.5,
+          "ask_indicators": [
+            72.29,
+            1.46
+          ],
+          "ask_original": 10,
+          "best_targ_bid": 99.25,
+          "lower_perc": 0.05627884757829741,
+          "max_amount": 20,
+          "name": "ETH",
+          "p_t": 0.03,
+          "pnl": 0.15,
+          "pnl_upper": 1.6578470798025369,
+          "qty": 0.01999416723516007,
+          "strike_perc": 0.027845987674285685,
+          "symbol": "ETH-7AUG25-3500-P-USDT",
+          "type": "put",
+          "upper_perc": 0.030000000000000037
+        },
+        "position_2": {
+          "ask": 0.5,
+          "ask_indicators": [
+            72.29,
+            1.46
+          ],
+          "ask_original": 10,
+          "best_targ_bid": 99.25,
+          "lower_perc": 0.05627884757829741,
+          "max_amount": 20,
+          "name": "ETH",
+          "p_t": 0.03,
+          "pnl": 0.13,
+          "pnl_upper": 1.3341534258470127,
+          "qty": 0.0203938660943571,
+          "strike_perc": 0.027845987674285685,
+          "symbol": "ETH-7AUG25-3500-P-USDT",
+          "type": "put",
+          "upper_perc": 0.024999999999999967
+        },
+        "position_3": {
+          "ask": 0.5,
+          "ask_indicators": [
+            72.29,
+            1.46
+          ],
+          "ask_original": 10,
+          "best_targ_bid": 84,
+          "lower_perc": 0.05141430555550513,
+          "max_amount": 20,
+          "name": "ETH",
+          "p_t": 0.025,
+          "pnl": 0.1,
+          "pnl_upper": 1.1583048920610945,
+          "qty": 0.018438614477790223,
+          "strike_perc": 0.027845987674285685,
+          "symbol": "ETH-7AUG25-3500-P-USDT",
+          "type": "put",
+          "upper_perc": 0.024999999999999967
+        },
+        "rsi": 46.76,
+        "time_to_exp": 19.584996371666666,
+        "we_need": "nothing"
       }
     },
-    "time": "2025-08-04 10:19:32.092150"
+    "time": "2025-08-06 13:25:41.610546"
   }
 }
