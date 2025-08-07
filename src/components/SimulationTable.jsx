@@ -25,14 +25,12 @@ export default function SimulationTable({ positions = null, updatedAt = null }) 
   );
   if (!order.length) return null;
 
-  /* строки-метрики
-     → PnL помещаем первым и помечаем flash: true
-  */
+  /* строки-метрики (PnL – первый, flash = true) */
   const rows = [
     { label: 'PnL', key: 'pnl', fmt: (v) => v.toFixed(2), flash: true },
     { label: 'Symbol',        key: 'symbol' },
     { label: 'Ask',           key: 'ask',          fmt: (v) => v.toFixed(2) },
-    { label: 'Ask original',  key: 'askOriginal',  fmt: (v) => v.toFixed(2) },    
+    { label: 'Ask original',  key: 'askOriginal',  fmt: (v) => v.toFixed(2) },
     { label: 'Target bid',    key: 'bestTargBid',  fmt: (v) => v.toFixed(2) },
     { label: 'PnL upper',     key: 'pnlUpper',     fmt: (v) => v.toFixed(2) },
     { label: 'p_t',           key: 'pt',           fmt: (v) => v.toFixed(2) },
@@ -74,7 +72,7 @@ export default function SimulationTable({ positions = null, updatedAt = null }) 
           <tr>
             <th style={{ width: 140 }}></th>
             {order.map((k) => (
-              <th key={k}>{k.toUpperCase()}</th>
+              <th key={k}>{k.replace('position_', 'sim_')}</th>
             ))}
           </tr>
         </thead>
@@ -84,7 +82,8 @@ export default function SimulationTable({ positions = null, updatedAt = null }) 
               <td>{label}</td>
               {order.map((k) => {
                 const val = positions[k]?.[key];
-                /* ячейки PnL – чуть крупнее и с ValueFlash */
+
+                /* ячейки PnL – ValueFlash */
                 if (flash) {
                   return (
                     <td
@@ -102,6 +101,7 @@ export default function SimulationTable({ positions = null, updatedAt = null }) 
                     </td>
                   );
                 }
+
                 /* остальные ячейки */
                 return (
                   <td key={k + key}>

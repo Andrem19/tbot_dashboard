@@ -16,54 +16,47 @@ function toUnixSeconds(str) {
   const ms = Number(msRaw.slice(0, 3));
   return Math.floor(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s, ms) / 1000);
 }
-const DEFAULT_SETTINGS = { coin: 'SOLUSDT', number_candles: 48, interv: 60 };
+
+/* === НАСТРОЙКИ ПО УМОЛЧАНИЮ ================================================ */
+const DEFAULT_SETTINGS = { coin: 'ETHUSDT', number_candles: 48, interv: 60 };
+
 const ALLOWED_MINUTES = [
   1, 3, 5, 15, 30, 60, 120, 240, 360, 480, 720, 1440, 4320, 10080, 43200,
 ];
-function normalizeCoin(v) {
-  const s = (v || '').toString().trim().toUpperCase();
-  return s || DEFAULT_SETTINGS.coin;
-}
-function normalizeLimit(v) {
-  const n = Math.floor(Number(v));
-  return Number.isFinite(n)
-    ? Math.min(1500, Math.max(1, n))
-    : DEFAULT_SETTINGS.number_candles;
-}
+function normalizeCoin(v)   { const s = (v || '').toString().trim().toUpperCase(); return s || DEFAULT_SETTINGS.coin; }
+function normalizeLimit(v)  { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.min(1500, Math.max(1, n)) : DEFAULT_SETTINGS.number_candles; }
 function normalizeInterv(v) {
   const n = Math.floor(Number(v));
   if (ALLOWED_MINUTES.includes(n)) return n;
-  let best = ALLOWED_MINUTES[0],
-    diff = Math.abs(n - best);
+  let best = ALLOWED_MINUTES[0], diff = Math.abs(n - best);
   for (const m of ALLOWED_MINUTES) {
     const d = Math.abs(n - m);
-    if (d < diff) {
-      best = m;
-      diff = d;
-    }
+    if (d < diff) { best = m; diff = d; }
   }
   return best;
 }
+
 /* ─── цвета линий ─────────────────────────────────────────── */
 const STAGE_COLORS = {
-  first: { entry: '#5e6288ff', sl: '#e74c3c', tp: '#2ecc71' },
+  first : { entry: '#5e6288ff', sl: '#e74c3c', tp: '#2ecc71' },
   second: { entry: '#ffffffff', sl: '#c0392b', tp: '#27ae60' },
 };
+
 /* ─── таблица опционов (как была) ─────────────────────────── */
 function OptionTable({ stages }) {
   const order = ['first', 'second'];
-  const rows = [
-    { label: 'Name', key: 'name' },
-    { label: 'Contracts', key: 'contracts' },
+  const rows  = [
+    { label: 'Name',          key: 'name' },
+    { label: 'Contracts',     key: 'contracts' },
     { label: 'Unrealised PnL', key: 'unrealisedPnl', fmt: (v) => v.toFixed(2) },
     {
       label: 'Avg Price',
-      key: 'avgPrice',
-      fmt: (v, inf) => `${v.toFixed(2)} (${(v * (inf.contracts || 0)).toFixed(2)})`,
+      key  : 'avgPrice',
+      fmt  : (v, inf) => `${v.toFixed(2)} (${(v * (inf.contracts || 0)).toFixed(2)})`,
     },
     { label: 'Mark Price', key: 'markPrice', fmt: (v) => v.toFixed(2) },
-    { label: 'Used Bid', key: 'usedBid', fmt: (v) => v.toFixed(2) },
-    { label: 'Max Size', key: 'maxSize', fmt: (v) => v.toFixed(2) },
+    { label: 'Used Bid',   key: 'usedBid',   fmt: (v) => v.toFixed(2) },
+    { label: 'Max Size',   key: 'maxSize',   fmt: (v) => v.toFixed(2) },
   ];
   if (!order.some((k) => stages[k]?.optionInfo)) return null;
   return (
@@ -93,6 +86,7 @@ function OptionTable({ stages }) {
     </div>
   );
 }
+
 /* ─── главный компонент ───────────────────────────────────── */
 export default function App() {
   /* heartbeat-таймер */
@@ -107,22 +101,22 @@ export default function App() {
 
   /* форма настроек */
   const [form, setForm] = useState({
-    coin: DEFAULT_SETTINGS.coin,
-    number_candles: String(DEFAULT_SETTINGS.number_candles),
-    interv: String(DEFAULT_SETTINGS.interv),
+    coin           : DEFAULT_SETTINGS.coin,
+    number_candles : String(DEFAULT_SETTINGS.number_candles),
+    interv         : String(DEFAULT_SETTINGS.interv),
   });
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const onChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
-  const onSubmit = useCallback(
+  const onChange  = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+  const onSubmit  = useCallback(
     (e) => {
       e.preventDefault();
       setSettings({
-        coin: normalizeCoin(form.coin),
+        coin          : normalizeCoin(form.coin),
         number_candles: normalizeLimit(form.number_candles),
-        interv: normalizeInterv(form.interv),
+        interv        : normalizeInterv(form.interv),
       });
     },
-    [form]
+    [form],
   );
 
   /* чек-боксы видимости линий */
@@ -130,52 +124,49 @@ export default function App() {
 
   /* ---------- stages ---------- */
   const stages = useMemo(() => {
-    const res = {},
-      st = dashboard?.stages || {};
+    const res = {}, st = dashboard?.stages || {};
     for (const [k, obj] of Object.entries(st)) {
       if (!obj?.exist || !obj.position?.exist) continue;
-      const entry = obj.position.position_info?.entryPx ?? null;
-      const lower = obj.lower_perc ?? null;
-      const upper = obj.upper_perc ?? null;
+      const entry  = obj.position.position_info?.entryPx ?? null;
+      const lower  = obj.lower_perc ?? null;
+      const upper  = obj.upper_perc ?? null;
       const openUts = toUnixSeconds(obj.position.open_time);
-      const h2e = obj.position.leg?.hours_to_exp ?? null;
-      let elapsed = 0,
-        total = 0,
-        percent = 0;
+      const h2e     = obj.position.leg?.hours_to_exp ?? null;
+
+      let elapsed = 0, total = 0, percent = 0;
       if (openUts && h2e != null) {
         elapsed = Math.max(0, (nowSec - openUts) / 3600);
-        total = elapsed + Number(h2e);
+        total   = elapsed + Number(h2e);
         percent = total > 0 ? Math.min(100, Math.max(0, (elapsed / total) * 100)) : 0;
       }
       res[k] = {
-        baseCoin: (obj.base_coin || 'SOL').toUpperCase(),
-        entryPx: entry,
-        sl: entry && lower != null ? entry * (1 - lower) : null,
-        tp: entry && upper != null ? entry * (1 + upper) : null,
-        qty: obj.position.position_info?.size ?? null,
-        futPnl: obj.position.position_info?.unrealizedPnl ?? null,
-        optPnl: obj.position.leg?.info?.unrealisedPnl ?? null,
+        baseCoin : (obj.base_coin || 'SOL').toUpperCase(),
+        entryPx  : entry,
+        sl       : entry && lower != null ? entry * (1 - lower) : null,
+        tp       : entry && upper != null ? entry * (1 + upper) : null,
+        qty      : obj.position.position_info?.size ?? null,
+        futPnl   : obj.position.position_info?.unrealizedPnl ?? null,
+        optPnl   : obj.position.leg?.info?.unrealisedPnl ?? null,
         optionInfo: {
-          name: obj.position.leg?.name,
-          contracts: obj.position.leg?.contracts,
-          unrealisedPnl: obj.position.leg?.info?.unrealisedPnl,
-          avgPrice: obj.position.leg?.info?.avgPrice,
-          markPrice: obj.position.leg?.info?.markPrice,
-          usedBid: obj.position.leg?.info?.used_bid,
-          maxSize: obj.position.leg?.info?.max_size,
+          name          : obj.position.leg?.name,
+          contracts     : obj.position.leg?.contracts,
+          unrealisedPnl : obj.position.leg?.info?.unrealisedPnl,
+          avgPrice      : obj.position.leg?.info?.avgPrice,
+          markPrice     : obj.position.leg?.info?.markPrice,
+          usedBid       : obj.position.leg?.info?.used_bid,
+          maxSize       : obj.position.leg?.info?.max_size,
         },
-        colors: STAGE_COLORS[k] || {},
-        progress: { elapsed, remaining: h2e, percent },
-        openTime: openUts,
+        colors   : STAGE_COLORS[k] || {},
+        progress : { elapsed, remaining: h2e, percent },
+        openTime : openUts,
       };
     }
     return res;
   }, [dashboard, nowSec]);
 
-  /* ---------- simulation positions + точное сравнение ---------- */
+  /* ---------- simulation positions ---------- */
   const [simUpdatedAt, setSimUpdatedAt] = useState(null);
   const prevSimJsonRef = useRef(null);
-
   const simulationPositions = useMemo(() => {
     const sim = dashboard?.stages?.simulation;
     if (!sim) return null;
@@ -184,24 +175,22 @@ export default function App() {
       const p = sim[k];
       if (!p) return;
       map[k] = {
-        symbol: p.symbol,
-        ask: p.ask,
+        symbol      : p.symbol,
+        ask         : p.ask,
         askIndicators: p.ask_indicators,
-        askOriginal: p.ask_original,
-        bestTargBid: p.best_targ_bid,
-        lowerPerc: p.lower_perc,
-        maxAmount: p.max_amount,
-        pt: p.p_t,
-        pnl: p.pnl,
-        pnlUpper: p.pnl_upper,
-        strikePerc: p.strike_perc,
-        upperPerc: p.upper_perc,
+        askOriginal : p.ask_original,
+        bestTargBid : p.best_targ_bid,
+        lowerPerc   : p.lower_perc,
+        maxAmount   : p.max_amount,
+        pt          : p.p_t,
+        pnl         : p.pnl,
+        pnlUpper    : p.pnl_upper,
+        strikePerc  : p.strike_perc,
+        upperPerc   : p.upper_perc,
       };
     });
     return Object.keys(map).length ? map : null;
   }, [dashboard]);
-
-  /* --- обновляем 'последнее изменение' только если контент simulation реально изменился --- */
   useEffect(() => {
     const json = simulationPositions ? JSON.stringify(simulationPositions) : null;
     if (json !== prevSimJsonRef.current) {
@@ -213,7 +202,7 @@ export default function App() {
   /* позиции → массив для графиков */
   const chartPositions = useMemo(
     () => Object.entries(stages).map(([k, v]) => ({ key: k, visible: visible[k], ...v })),
-    [stages, visible]
+    [stages, visible],
   );
 
   /* группируем по монетам */
@@ -230,8 +219,7 @@ export default function App() {
 
   /* суммарные uPnL */
   const totals = useMemo(() => {
-    let fut = 0,
-      opt = 0;
+    let fut = 0, opt = 0;
     for (const v of Object.values(stages)) {
       fut += Number(v.futPnl || 0);
       opt += Number(v.optPnl || 0);
@@ -246,10 +234,18 @@ export default function App() {
     candleCount: 0,
     reconnect: () => {},
   });
+
+  /* -- СИНХРОН С «Coin» ТОЛЬКО ЕСЛИ ФАКТИЧЕСКИ ПОМЕНЯЛСЯ АКТИВНЫЙ ГРАФИК ---- */
+  const prevChartCoinRef = useRef(chartStatus.coin);
   useEffect(() => {
-    if (chartStatus.coin && chartStatus.coin !== form.coin) {
+    if (
+      chartStatus.coin &&
+      chartStatus.coin !== form.coin &&
+      chartStatus.coin !== prevChartCoinRef.current
+    ) {
       setForm((prev) => ({ ...prev, coin: chartStatus.coin }));
     }
+    prevChartCoinRef.current = chartStatus.coin;
   }, [chartStatus.coin, form.coin]);
 
   /* ─── JSX ──────────────────────────────────────────────── */
@@ -318,18 +314,16 @@ export default function App() {
         />
         <StatsPanel
           stages={{
-            first:
-              stages.first && {
-                futPnl: stages.first.futPnl,
-                optPnl: stages.first.optPnl,
-                total: Number(stages.first.futPnl || 0) + Number(stages.first.optPnl || 0),
-              },
-            second:
-              stages.second && {
-                futPnl: stages.second.futPnl,
-                optPnl: stages.second.optPnl,
-                total: Number(stages.second.futPnl || 0) + Number(stages.second.optPnl || 0),
-              },
+            first : stages.first  && {
+              futPnl: stages.first.futPnl,
+              optPnl: stages.first.optPnl,
+              total : Number(stages.first.futPnl || 0) + Number(stages.first.optPnl || 0),
+            },
+            second: stages.second && {
+              futPnl: stages.second.futPnl,
+              optPnl: stages.second.optPnl,
+              total : Number(stages.second.futPnl || 0) + Number(stages.second.optPnl || 0),
+            },
           }}
           totals={totals}
         />
@@ -339,9 +333,7 @@ export default function App() {
       {['first', 'second'].map((k) => {
         const pr = stages[k]?.progress;
         if (!pr || pr.remaining == null) return null;
-        const lbl = `${k}: прошло ${pr.elapsed.toFixed(1)} ч / осталось ${pr.remaining.toFixed(
-          1
-        )} ч`;
+        const lbl = `${k}: прошло ${pr.elapsed.toFixed(1)} ч / осталось ${pr.remaining.toFixed(1)} ч`;
         return (
           <div className="progress-wrapper" key={'p' + k}>
             <div className="progress-label">{lbl}</div>
@@ -372,15 +364,15 @@ export default function App() {
               onClick={chartStatus.reconnect}
               title="Reconnect WebSocket now"
               style={{
-                marginLeft: 6,
-                padding: '0 6px',
-                background: '#333',
-                color: '#fff',
-                border: '1px solid #555',
-                borderRadius: 3,
-                cursor: 'pointer',
-                fontSize: 12,
-                lineHeight: '14px',
+                marginLeft   : 6,
+                padding      : '0 6px',
+                background   : '#333',
+                color        : '#fff',
+                border       : '1px solid #555',
+                borderRadius : 3,
+                cursor       : 'pointer',
+                fontSize     : 12,
+                lineHeight   : '14px',
               }}
             >
               ↻
