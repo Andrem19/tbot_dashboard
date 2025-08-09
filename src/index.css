@@ -84,7 +84,6 @@ a { color: #61dafb; }
 .form-row button:hover { filter: brightness(1.05); }
 
 /* === Основной блок: график + правая панель === */
-/* На десктопе — аккуратная сетка 1fr + 260px */
 .main-content{
   display: grid;
   grid-template-columns: minmax(0, 1fr) 260px;
@@ -95,14 +94,14 @@ a { color: #61dafb; }
 
 /* Контейнер вкладок/графика */
 .chart-tabs-root{
-  min-width: 0;  /* важно для переноса контента в grid/flex */
+  min-width: 0;
 }
 
 /* Обёртка и контейнер графика */
 .chart-wrapper{
   width: 100%;
   height: auto;
-  min-height: 60vh;       /* крупнее на десктопе для «воздуха» */
+  min-height: 60vh;
   background: #121212;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -141,9 +140,8 @@ a { color: #61dafb; }
 
 /* Правая панель (статистика) */
 .stats-panel{
-  position: sticky;       /* закрепляем в видимой области при прокрутке */
+  position: sticky;
   top: 8px;
-  border-left: none;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -159,12 +157,7 @@ a { color: #61dafb; }
   align-items: center;
   gap: 8px;
 }
-.pos-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
+.pos-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .stats-row {
   display: flex;
   justify-content: space-between;
@@ -196,9 +189,7 @@ a { color: #61dafb; }
   overflow: hidden;
 }
 .stats-table th,
-.stats-table td {
-  padding: 6px 8px;
-}
+.stats-table td { padding: 6px 8px; }
 .stats-table thead th {
   background: #1e1e1e;
   color: #cfcfcf;
@@ -263,15 +254,13 @@ a { color: #61dafb; }
   border-bottom: 1px solid #222;
   color: #ddd;
 }
-.option-table tr:nth-child(even) td {
-  background: #141414;
-}
+.option-table tr:nth-child(even) td { background: #141414; }
 .option-table td:first-child {
   color: #9a9a9a;
   width: 160px;
 }
 
-/* === Строка статуса === */
+/* === Строка статуса (поверх любых слоёв графика) === */
 .status-bar {
   padding: 8px 12px;
   font-size: 12px;
@@ -281,15 +270,15 @@ a { color: #61dafb; }
   justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 5; /* гарантируем кликабельность кнопки перезапуска */
 }
 
 /* === Мобильная верстка === */
 @media (max-width: 1024px) {
   .chart-wrapper { min-height: 48vh; }
 }
-
 @media (max-width: 768px) {
-  /* Верхняя форма — 2 колонки */
   .form-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
@@ -299,19 +288,10 @@ a { color: #61dafb; }
   .form-row select { padding: 6px 8px; font-size: 13px; }
   .form-row button { grid-column: 1 / -1; padding: 10px 0; }
 
-  /* Основной блок — одна колонка */
   .main-content { display: block; }
 
-  .stats-panel {
-    position: relative;
-    top: 0;
-    margin-top: 10px;
-  }
-
+  .stats-panel { position: relative; top: 0; margin-top: 10px; }
   .option-table-wrapper { margin-top: 8px; }
 
-  .chart-wrapper{
-    min-height: 320px;
-    border-radius: 8px;
-  }
+  .chart-wrapper{ min-height: 320px; border-radius: 8px; }
 }

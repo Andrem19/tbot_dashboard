@@ -18,9 +18,11 @@ export function useBinanceKlines(settings) {
   const [loading,      setLoading]     = useState(false);
   const [wsConnected,  setWsConnected] = useState(false);
 
-  const wsRef        = useRef(null);
-  const reconnectRef = useRef(null);   // id тайм-аута на авто-reconnect
-  const closedManual = useRef(false);  // true → размонтирование компонента
+  const wsRef           = useRef(null);
+  const reconnectRef    = useRef(null);    // id тайм-аута авто-переподключения
+  const closedManual    = useRef(false);   // размонтирование хука
+  const manualReconnect = useRef(false);   // флаг «мы закрываем WS намеренно ради ручного reconnect»
+  const connectingRef   = useRef(false);   // защита от параллельных connectWS()
 
   /* ---------- начальная загрузка свечей ---------- */
   const loadInitial = useCallback(async (signal) => {
@@ -40,20 +42,33 @@ export function useBinanceKlines(settings) {
   }, [coin, number_candles, interv]);
 
   /* ---------- функция подключения к WS (может вызываться повторно) ---------- */
-  const connectWS = useCallback(() => {
-    // отменяем запланированный автоматический reconnect (если был)
+  const connectWS = useCallback(async () => {
+    // анти-дребезг: не даём запускать параллельные подключения
+    if (connectingRef.current) return;
+    connectingRef.current = true;
+
+    // отменяем ожидающий авто-reconnect, если был
     if (reconnectRef.current) {
       clearTimeout(reconnectRef.current);
       reconnectRef.current = null;
     }
 
-    // закрываем предыдущий сокет, если существовал
+    // если есть старый WS — закрываем, помечая, что это наш «ручной» перезапуск
+    manualReconnect.current = true;
     if (wsRef.current) {
       try { wsRef.current.close(); } catch {}
       wsRef.current = null;
     }
 
-    // открываем новое соединение
+    // Обновим свечи «на сейчас», чтобы график стал актуальным ещё до открытия нового WS
+    try {
+      const fresh = await fetchKlines(coin, number_candles, interv);
+      setCandles(fresh);
+    } catch (e) {
+      console.warn('Reconnect fetch klines failed (will continue with WS):', e);
+    }
+
+    // Создаём новый WS
     const ws = createKlineWebSocket(coin, interv, (candle) => {
       setCandles(prev => {
         if (prev.length === 0) return [candle];
@@ -67,26 +82,33 @@ export function useBinanceKlines(settings) {
       });
     });
 
-    /* ---- обработка состояний ---- */
-    ws.onopen = () => {
-      setWsConnected(true);            // соединение успешно открыто
-      if (reconnectRef.current) {
-        clearTimeout(reconnectRef.current);
-        reconnectRef.current = null;
-      }
-    };
-
+    // планировщик авто-reconnect
     const scheduleReconnect = () => {
       if (closedManual.current || reconnectRef.current) return;
       reconnectRef.current = setTimeout(() => {
         reconnectRef.current = null;
-        connectWS();                   // пробуем снова
+        connectWS(); // пробуем снова
       }, 5_000);
     };
 
+    ws.onopen = () => {
+      setWsConnected(true);
+      if (reconnectRef.current) {
+        clearTimeout(reconnectRef.current);
+        reconnectRef.current = null;
+      }
+      // ручная фаза закончена — дальше авто-reconnect должен работать как прежде
+      manualReconnect.current = false;
+      connectingRef.current = false;
+    };
+
     ws.onclose = () => {
-      setWsConnected(false);           // потеряли соединение
-      scheduleReconnect();             // планируем автоматический reconnect
+      setWsConnected(false);
+      // если закрытие было инициировано нами для ручного reconnect — не планируем авто-reconnect на «старое» соединение
+      if (!manualReconnect.current) {
+        scheduleReconnect();
+      }
+      // Если manualReconnect=true, значит это закрывался старый WS; новый уже откроется выше
     };
 
     ws.onerror = (err) => {
@@ -95,9 +117,7 @@ export function useBinanceKlines(settings) {
     };
 
     wsRef.current = ws;
-  }, [coin, interv]);
-
-
+  }, [coin, interv, number_candles]);
 
   /* ---------- эффекты ---------- */
   useEffect(() => {
@@ -110,7 +130,6 @@ export function useBinanceKlines(settings) {
     closedManual.current = false;
     if (!loading) connectWS();
     return () => {
-      // сигналим, что компонент размонтирован
       closedManual.current = true;
       try { wsRef.current?.close(); } catch {}
       if (reconnectRef.current) {
@@ -125,6 +144,6 @@ export function useBinanceKlines(settings) {
     candles,
     loading,
     wsConnected,
-    reconnect: connectWS,    // ручное переподключение
+    reconnect: connectWS,    // ручное мгновенное переподключение
   };
 }

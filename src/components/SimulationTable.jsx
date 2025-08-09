@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react';
 import ValueFlash from './ValueFlash.jsx';
 
 /**
- * Панель simulation с таймером последнего обновления
- * и анимированным PnL (ValueFlash).
+ * Панель simulation с таймером последнего обновления,
+ * анимированным PnL (ValueFlash) и компактными метаданными.
  *
  * props:
  *   positions  – объект { position_1:{…}, position_2:{…}, … } | null
  *   updatedAt  – время последнего получения данных (ms)       | null
+ *   simMeta    – объект { relAtr, periodAvgDist, periodAvgPnl, weNeed } | null
  */
-export default function SimulationTable({ positions = null, updatedAt = null }) {
+export default function SimulationTable({ positions = null, updatedAt = null, simMeta = null }) {
   /* ——— таймер «секунд с последнего обновления» ——— */
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -34,21 +35,9 @@ export default function SimulationTable({ positions = null, updatedAt = null }) 
     { label: 'Target bid',    key: 'bestTargBid',  fmt: (v) => v.toFixed(2) },
     { label: 'PnL upper',     key: 'pnlUpper',     fmt: (v) => v.toFixed(2) },
     { label: 'p_t',           key: 'pt',           fmt: (v) => v.toFixed(2) },
-    {
-      label: 'Strike %',
-      key: 'strikePerc',
-      fmt: (v) => v.toFixed(4),
-    },
-    {
-      label: 'Lower %',
-      key: 'lowerPerc',
-      fmt: (v) => v.toFixed(4),
-    },
-    {
-      label: 'Upper %',
-      key: 'upperPerc',
-      fmt: (v) => v.toFixed(4),
-    },
+    { label: 'Strike %',      key: 'strikePerc',   fmt: (v) => v.toFixed(4) },
+    { label: 'Lower %',       key: 'lowerPerc',    fmt: (v) => v.toFixed(4) },
+    { label: 'Upper %',       key: 'upperPerc',    fmt: (v) => v.toFixed(4) },
     { label: 'Max amount',    key: 'maxAmount' },
     {
       label: 'Ask indicators',
@@ -58,12 +47,39 @@ export default function SimulationTable({ positions = null, updatedAt = null }) 
     },
   ];
 
+  /* ——— компактная строка с таймером + метаданными симуляции ——— */
+  const metaLabel = (title, val, fmt) => (
+    <span title={title} style={{ whiteSpace: 'nowrap' }}>
+      {title}: {val == null ? '—' : fmt ? fmt(val) : val}
+    </span>
+  );
+
   return (
     <div className="option-table-wrapper">
-      {/* --- таймер --- */}
-      <div style={{ fontSize: 12, marginBottom: 4, color: '#ccc' }}>
-        Last update:&nbsp;
-        {secondsAgo == null ? '—' : `${secondsAgo}s ago`}
+      {/* --- таймер и метрики в одну строку --- */}
+      <div
+        style={{
+          fontSize: 12,
+          marginBottom: 4,
+          color: '#ccc',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexWrap: 'wrap',
+        }}
+      >
+        <span>
+          Last update:&nbsp;{secondsAgo == null ? '—' : `${secondsAgo}s ago`}
+        </span>
+
+        {simMeta && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', color: '#ddd' }}>
+            {metaLabel('ATR(rel)', simMeta.relAtr, (v) => Number(v).toFixed(4))}
+            {metaLabel('Dist(avg)', simMeta.periodAvgDist, (v) => Number(v).toFixed(4))}
+            {metaLabel('PnL(avg)', simMeta.periodAvgPnl, (v) => Number(v).toFixed(3))}
+            {metaLabel('Need', simMeta.weNeed)}
+          </div>
+        )}
       </div>
 
       {/* --- таблица --- */}
@@ -82,7 +98,6 @@ export default function SimulationTable({ positions = null, updatedAt = null }) 
               <td>{label}</td>
               {order.map((k) => {
                 const val = positions[k]?.[key];
-
                 /* ячейки PnL – ValueFlash */
                 if (flash) {
                   return (
@@ -101,7 +116,6 @@ export default function SimulationTable({ positions = null, updatedAt = null }) 
                     </td>
                   );
                 }
-
                 /* остальные ячейки */
                 return (
                   <td key={k + key}>

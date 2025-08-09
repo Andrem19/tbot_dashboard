@@ -19,7 +19,6 @@ function toUnixSeconds(str) {
 
 /* === НАСТРОЙКИ ПО УМОЛЧАНИЮ ================================================ */
 const DEFAULT_SETTINGS = { coin: 'ETHUSDT', number_candles: 48, interv: 60 };
-
 const ALLOWED_MINUTES = [
   1, 3, 5, 15, 30, 60, 120, 240, 360, 480, 720, 1440, 4320, 10080, 43200,
 ];
@@ -139,6 +138,7 @@ export default function App() {
         total   = elapsed + Number(h2e);
         percent = total > 0 ? Math.min(100, Math.max(0, (elapsed / total) * 100)) : 0;
       }
+
       res[k] = {
         baseCoin : (obj.base_coin || 'SOL').toUpperCase(),
         entryPx  : entry,
@@ -167,6 +167,7 @@ export default function App() {
   /* ---------- simulation positions ---------- */
   const [simUpdatedAt, setSimUpdatedAt] = useState(null);
   const prevSimJsonRef = useRef(null);
+
   const simulationPositions = useMemo(() => {
     const sim = dashboard?.stages?.simulation;
     if (!sim) return null;
@@ -191,6 +192,19 @@ export default function App() {
     });
     return Object.keys(map).length ? map : null;
   }, [dashboard]);
+
+  /* --- метаданные симуляции (для вывода рядом с таймером) --- */
+  const simMeta = useMemo(() => {
+    const sim = dashboard?.stages?.simulation;
+    if (!sim) return null;
+    return {
+      relAtr        : Array.isArray(sim.atr) ? sim.atr[1] : null,
+      periodAvgDist : sim.period_avg_dist ?? null,
+      periodAvgPnl  : sim.period_avg_pnl ?? null,
+      weNeed        : sim.we_need ?? null,
+    };
+  }, [dashboard]);
+
   useEffect(() => {
     const json = simulationPositions ? JSON.stringify(simulationPositions) : null;
     if (json !== prevSimJsonRef.current) {
@@ -350,8 +364,12 @@ export default function App() {
       {/* таблица опционов first/second */}
       <OptionTable stages={stages} />
 
-      {/* таблица simulation + таймер */}
-      <SimulationTable positions={simulationPositions} updatedAt={simUpdatedAt} />
+      {/* таблица simulation + таймер + метрики */}
+      <SimulationTable
+        positions={simulationPositions}
+        updatedAt={simUpdatedAt}
+        simMeta={simMeta}
+      />
 
       {/* нижняя строка */}
       <div className="status-bar">
@@ -361,8 +379,13 @@ export default function App() {
           {!chartStatus.wsConnected && (
             <button
               type="button"
-              onClick={chartStatus.reconnect}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                try { chartStatus.reconnect?.(); } catch (err) { console.error(err); }
+              }}
               title="Reconnect WebSocket now"
+              aria-label="Reconnect WebSocket"
               style={{
                 marginLeft   : 6,
                 padding      : '0 6px',
@@ -373,6 +396,7 @@ export default function App() {
                 cursor       : 'pointer',
                 fontSize     : 12,
                 lineHeight   : '14px',
+                pointerEvents: 'auto',
               }}
             >
               ↻
