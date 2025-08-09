@@ -21,7 +21,6 @@ export function useBinanceKlines(settings) {
   const wsRef           = useRef(null);
   const reconnectRef    = useRef(null);    // id тайм-аута авто-переподключения
   const closedManual    = useRef(false);   // размонтирование хука
-  const manualReconnect = useRef(false);   // флаг «мы закрываем WS намеренно ради ручного reconnect»
   const connectingRef   = useRef(false);   // защита от параллельных connectWS()
 
   /* ---------- начальная загрузка свечей ---------- */
@@ -53,14 +52,14 @@ export function useBinanceKlines(settings) {
       reconnectRef.current = null;
     }
 
-    // если есть старый WS — закрываем, помечая, что это наш «ручной» перезапуск
-    manualReconnect.current = true;
-    if (wsRef.current) {
-      try { wsRef.current.close(); } catch {}
+    // закрываем старый сокет (если есть)
+    const prev = wsRef.current;
+    if (prev) {
+      try { prev.close(); } catch {}
       wsRef.current = null;
     }
 
-    // Обновим свечи «на сейчас», чтобы график стал актуальным ещё до открытия нового WS
+    // Обновим свечи «на сейчас», чтобы график стал актуальным ещё до WS
     try {
       const fresh = await fetchKlines(coin, number_candles, interv);
       setCandles(fresh);
@@ -70,53 +69,54 @@ export function useBinanceKlines(settings) {
 
     // Создаём новый WS
     const ws = createKlineWebSocket(coin, interv, (candle) => {
-      setCandles(prev => {
-        if (prev.length === 0) return [candle];
-        const last = prev[prev.length - 1];
+      setCandles(prevArr => {
+        if (prevArr.length === 0) return [candle];
+        const last = prevArr[prevArr.length - 1];
         if (candle.time === last.time) {
-          const updated = [...prev];
+          const updated = [...prevArr];
           updated[updated.length - 1] = candle;
           return updated;
         }
-        return candle.time > last.time ? [...prev, candle] : prev;
+        return candle.time > last.time ? [...prevArr, candle] : prevArr;
       });
     });
 
-    // планировщик авто-reconnect
+    // Запоминаем как «текущий» экземпляр
+    wsRef.current = ws;
+
+    // Планировщик авто-reconnect только для актуального экземпляра
     const scheduleReconnect = () => {
+      // если уже размонтированы или уже запланировано — выходим
       if (closedManual.current || reconnectRef.current) return;
+      // переподключаем только если закрывается «наш» текущий сокет
+      if (wsRef.current !== ws) return;
       reconnectRef.current = setTimeout(() => {
         reconnectRef.current = null;
-        connectWS(); // пробуем снова
+        connectWS();
       }, 5_000);
     };
 
     ws.onopen = () => {
       setWsConnected(true);
+      // на всякий случай отменяем старые таймеры
       if (reconnectRef.current) {
         clearTimeout(reconnectRef.current);
         reconnectRef.current = null;
       }
-      // ручная фаза закончена — дальше авто-reconnect должен работать как прежде
-      manualReconnect.current = false;
-      connectingRef.current = false;
+      connectingRef.current = false; // <— КРИТИЧЕСКОЕ: снимаем блокировку
     };
 
     ws.onclose = () => {
       setWsConnected(false);
-      // если закрытие было инициировано нами для ручного reconnect — не планируем авто-reconnect на «старое» соединение
-      if (!manualReconnect.current) {
-        scheduleReconnect();
-      }
-      // Если manualReconnect=true, значит это закрывался старый WS; новый уже откроется выше
+      connectingRef.current = false; // <— КРИТИЧЕСКОЕ: снимаем блокировку даже если onopen не случился
+      scheduleReconnect();
     };
 
     ws.onerror = (err) => {
       console.error('WebSocket error', err);
+      connectingRef.current = false; // <— КРИТИЧЕСКОЕ: иначе «залипнет»
       try { ws.close(); } catch {}
     };
-
-    wsRef.current = ws;
   }, [coin, interv, number_candles]);
 
   /* ---------- эффекты ---------- */

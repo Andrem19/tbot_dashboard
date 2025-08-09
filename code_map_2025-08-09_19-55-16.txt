@@ -11,6 +11,7 @@ assets/
 components/
     Chart.jsx
     ChartTabs.jsx
+    SimulationTable.jsx
     StatsPanel.jsx
     ValueFlash.jsx
 hooks/
@@ -25,107 +26,110 @@ utils/
 ===== КОД ФАЙЛОВ =====
 
 ./src/App.css:
+/* Full-width корневой контейнер приложения */
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  display: block;
 }
+/* Ненужное из шаблона оставим нейтрально – не мешает, но и не влияет */
 .logo {
   height: 6em;
   padding: 1.5em;
   will-change: filter;
   transition: filter 300ms;
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
+.logo:hover { filter: drop-shadow(0 0 2em #646cffaa); }
+.logo.react:hover { filter: drop-shadow(0 0 2em #61dafbaa); }
 @keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 @media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+  a:nth-of-type(2) .logo { animation: logo-spin infinite 20s linear; }
 }
-.card {
-  padding: 2em;
-}
-.read-the-docs {
-  color: #888;
-}
+.card { padding: 2em; }
+.read-the-docs { color: #888; }
 --------------------------------------------------------------------------------
 ./src/App.jsx:
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import ChartTabs    from './components/ChartTabs.jsx';
-import StatsPanel   from './components/StatsPanel.jsx';
+import ChartTabs       from './components/ChartTabs.jsx';
+import StatsPanel      from './components/StatsPanel.jsx';
+import SimulationTable from './components/SimulationTable.jsx';
 import { useFirebaseData } from './hooks';
 import './App.css';
 /* ─── утилиты ─────────────────────────────────────────────── */
 function toUnixSeconds(str) {
   if (!str || typeof str !== 'string') return null;
-  const m = str.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3,6}))?/);
+  const m = str.match(
+    /^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3,6}))?/
+  );
   if (!m) return null;
   const [, y, mo, d, h, mi, s, msRaw = '000'] = m;
   const ms = Number(msRaw.slice(0, 3));
   return Math.floor(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s, ms) / 1000);
 }
-const DEFAULT_SETTINGS = { coin: 'SOLUSDT', number_candles: 48, interv: 60 };
-const ALLOWED_MINUTES  = [1,3,5,15,30,60,120,240,360,480,720,1440,4320,10080,43200];
-function normalizeCoin(v){ const s=(v||'').toString().trim().toUpperCase(); return s || DEFAULT_SETTINGS.coin; }
-function normalizeLimit(v){ const n=Math.floor(Number(v)); return Number.isFinite(n) ? Math.min(1500, Math.max(1,n)) : DEFAULT_SETTINGS.number_candles; }
-function normalizeInterv(v){
+/* === НАСТРОЙКИ ПО УМОЛЧАНИЮ ================================================ */
+const DEFAULT_SETTINGS = { coin: 'ETHUSDT', number_candles: 48, interv: 60 };
+const ALLOWED_MINUTES = [
+  1, 3, 5, 15, 30, 60, 120, 240, 360, 480, 720, 1440, 4320, 10080, 43200,
+];
+function normalizeCoin(v)   { const s = (v || '').toString().trim().toUpperCase(); return s || DEFAULT_SETTINGS.coin; }
+function normalizeLimit(v)  { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.min(1500, Math.max(1, n)) : DEFAULT_SETTINGS.number_candles; }
+function normalizeInterv(v) {
   const n = Math.floor(Number(v));
   if (ALLOWED_MINUTES.includes(n)) return n;
   let best = ALLOWED_MINUTES[0], diff = Math.abs(n - best);
-  for (const m of ALLOWED_MINUTES){
+  for (const m of ALLOWED_MINUTES) {
     const d = Math.abs(n - m);
-    if (d < diff){ best = m; diff = d; }
+    if (d < diff) { best = m; diff = d; }
   }
   return best;
 }
 /* ─── цвета линий ─────────────────────────────────────────── */
 const STAGE_COLORS = {
-  first : { entry:'#5e6288ff', sl:'#e74c3c', tp:'#2ecc71' },
-  second: { entry:'#ffffffff', sl:'#c0392b', tp:'#27ae60' },
+  first : { entry: '#5e6288ff', sl: '#e74c3c', tp: '#2ecc71' },
+  second: { entry: '#ffffffff', sl: '#c0392b', tp: '#27ae60' },
 };
-/* ─── таблица опционов (без изменений) ────────────────────── */
+/* ─── таблица опционов (как была) ─────────────────────────── */
 function OptionTable({ stages }) {
-  const order = ['first','second'];
-  const rows = [
-    {label:'Name', key:'name'},
-    {label:'Contracts', key:'contracts'},
-    {label:'Unrealised PnL', key:'unrealisedPnl', fmt:v=>Number(v).toFixed(2)},
-    {label:'Avg Price', key:'avgPrice', fmt:(v,inf)=>`${Number(v).toFixed(2)} (${Number(v*(inf.contracts||0)).toFixed(2)})`},
-    {label:'Mark Price', key:'markPrice', fmt:v=>Number(v).toFixed(2)},
-    {label:'Used Bid', key:'usedBid', fmt:v=>Number(v).toFixed(2)},
-    {label:'Max Size', key:'maxSize', fmt:v=>Number(v).toFixed(2)},
+  const order = ['first', 'second'];
+  const rows  = [
+    { label: 'Name',          key: 'name' },
+    { label: 'Contracts',     key: 'contracts' },
+    { label: 'Unrealised PnL', key: 'unrealisedPnl', fmt: (v) => v.toFixed(2) },
+    {
+      label: 'Avg Price',
+      key  : 'avgPrice',
+      fmt  : (v, inf) => `${v.toFixed(2)} (${(v * (inf.contracts || 0)).toFixed(2)})`,
+    },
+    { label: 'Mark Price', key: 'markPrice', fmt: (v) => v.toFixed(2) },
+    { label: 'Used Bid',   key: 'usedBid',   fmt: (v) => v.toFixed(2) },
+    { label: 'Max Size',   key: 'maxSize',   fmt: (v) => v.toFixed(2) },
   ];
-  if (!order.some(k => stages[k]?.optionInfo)) return null;
+  if (!order.some((k) => stages[k]?.optionInfo)) return null;
   return (
     <div className="option-table-wrapper">
       <table className="option-table">
         <thead>
           <tr>
-            <th style={{width:140}}></th>
-            {order.map(k => <th key={k}>{stages[k] ? k.toUpperCase() : ''}</th>)}
+            <th style={{ width: 140 }}></th>
+            {order.map((k) => <th key={k}>{stages[k] ? k.toUpperCase() : ''}</th>)}
           </tr>
         </thead>
         <tbody>
-          {rows.map(({label,key,fmt}) => (
+          {rows.map(({ label, key, fmt }) => (
             <tr key={key}>
               <td>{label}</td>
-              {order.map(k => {
-                const inf = stages[k]?.optionInfo; const val = inf?.[key];
-                return <td key={k+key}>{val==null ? '-' : (fmt ? fmt(val,inf) : val)}</td>;
+              {order.map((k) => {
+                const inf = stages[k]?.optionInfo;
+                const val = inf?.[key];
+                return (
+                  <td key={k + key}>{val == null ? '-' : fmt ? fmt(val, inf) : val}</td>
+                );
               })}
             </tr>
           ))}
@@ -146,30 +150,33 @@ export default function App() {
   const { data: dashboard, connected: dbConnected } = useFirebaseData('dashboard');
   /* форма настроек */
   const [form, setForm] = useState({
-    coin: DEFAULT_SETTINGS.coin,
-    number_candles: String(DEFAULT_SETTINGS.number_candles),
-    interv: String(DEFAULT_SETTINGS.interv),
+    coin           : DEFAULT_SETTINGS.coin,
+    number_candles : String(DEFAULT_SETTINGS.number_candles),
+    interv         : String(DEFAULT_SETTINGS.interv),
   });
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const onChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
-  const onSubmit = useCallback(e => {
-    e.preventDefault();
-    setSettings({
-      coin: normalizeCoin(form.coin),
-      number_candles: normalizeLimit(form.number_candles),
-      interv: normalizeInterv(form.interv),
-    });
-  }, [form]);
+  const onChange  = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+  const onSubmit  = useCallback(
+    (e) => {
+      e.preventDefault();
+      setSettings({
+        coin          : normalizeCoin(form.coin),
+        number_candles: normalizeLimit(form.number_candles),
+        interv        : normalizeInterv(form.interv),
+      });
+    },
+    [form],
+  );
   /* чек-боксы видимости линий */
-  const [visible, setVisible] = useState({ first:true, second:true });
+  const [visible, setVisible] = useState({ first: true, second: true });
   /* ---------- stages ---------- */
   const stages = useMemo(() => {
     const res = {}, st = dashboard?.stages || {};
     for (const [k, obj] of Object.entries(st)) {
       if (!obj?.exist || !obj.position?.exist) continue;
-      const entry   = obj.position.position_info?.entryPx ?? null;
-      const lower   = obj.lower_perc ?? null;
-      const upper   = obj.upper_perc ?? null;
+      const entry  = obj.position.position_info?.entryPx ?? null;
+      const lower  = obj.lower_perc ?? null;
+      const upper  = obj.upper_perc ?? null;
       const openUts = toUnixSeconds(obj.position.open_time);
       const h2e     = obj.position.leg?.hours_to_exp ?? null;
       let elapsed = 0, total = 0, percent = 0;
@@ -179,40 +186,86 @@ export default function App() {
         percent = total > 0 ? Math.min(100, Math.max(0, (elapsed / total) * 100)) : 0;
       }
       res[k] = {
-        baseCoin: (obj.base_coin || 'SOL').toUpperCase(),
-        entryPx: entry,
-        sl     : entry && lower != null ? entry * (1 - lower) : null,
-        tp     : entry && upper != null ? entry * (1 + upper) : null,
-        qty    : obj.position.position_info?.size ?? null,
-        futPnl : obj.position.position_info?.unrealizedPnl ?? null,
-        optPnl : obj.position.leg?.info?.unrealisedPnl ?? null,
+        baseCoin : (obj.base_coin || 'SOL').toUpperCase(),
+        entryPx  : entry,
+        sl       : entry && lower != null ? entry * (1 - lower) : null,
+        tp       : entry && upper != null ? entry * (1 + upper) : null,
+        qty      : obj.position.position_info?.size ?? null,
+        futPnl   : obj.position.position_info?.unrealizedPnl ?? null,
+        optPnl   : obj.position.leg?.info?.unrealisedPnl ?? null,
         optionInfo: {
-          name           : obj.position.leg?.name,
-          contracts      : obj.position.leg?.contracts,
-          unrealisedPnl  : obj.position.leg?.info?.unrealisedPnl,
-          avgPrice       : obj.position.leg?.info?.avgPrice,
-          markPrice      : obj.position.leg?.info?.markPrice,
-          usedBid        : obj.position.leg?.info?.used_bid,
-          maxSize        : obj.position.leg?.info?.max_size,
+          name          : obj.position.leg?.name,
+          contracts     : obj.position.leg?.contracts,
+          unrealisedPnl : obj.position.leg?.info?.unrealisedPnl,
+          avgPrice      : obj.position.leg?.info?.avgPrice,
+          markPrice     : obj.position.leg?.info?.markPrice,
+          usedBid       : obj.position.leg?.info?.used_bid,
+          maxSize       : obj.position.leg?.info?.max_size,
         },
-        colors  : STAGE_COLORS[k] || {},
-        progress: { elapsed, remaining: h2e, percent },
-        openTime: openUts,
+        colors   : STAGE_COLORS[k] || {},
+        progress : { elapsed, remaining: h2e, percent },
+        openTime : openUts,
       };
     }
     return res;
   }, [dashboard, nowSec]);
-  /* позиции → массив */
-  const chartPositions = useMemo(() =>
-    Object.entries(stages).map(([k, v]) => ({ key:k, visible:visible[k], ...v })),
-  [stages, visible]);
+  /* ---------- simulation positions ---------- */
+  const [simUpdatedAt, setSimUpdatedAt] = useState(null);
+  const prevSimJsonRef = useRef(null);
+  const simulationPositions = useMemo(() => {
+    const sim = dashboard?.stages?.simulation;
+    if (!sim) return null;
+    const map = {};
+    ['position_1', 'position_2', 'position_3'].forEach((k) => {
+      const p = sim[k];
+      if (!p) return;
+      map[k] = {
+        symbol      : p.symbol,
+        ask         : p.ask,
+        askIndicators: p.ask_indicators,
+        askOriginal : p.ask_original,
+        bestTargBid : p.best_targ_bid,
+        lowerPerc   : p.lower_perc,
+        maxAmount   : p.max_amount,
+        pt          : p.p_t,
+        pnl         : p.pnl,
+        pnlUpper    : p.pnl_upper,
+        strikePerc  : p.strike_perc,
+        upperPerc   : p.upper_perc,
+      };
+    });
+    return Object.keys(map).length ? map : null;
+  }, [dashboard]);
+  /* --- метаданные симуляции (для вывода рядом с таймером) --- */
+  const simMeta = useMemo(() => {
+    const sim = dashboard?.stages?.simulation;
+    if (!sim) return null;
+    return {
+      relAtr        : Array.isArray(sim.atr) ? sim.atr[1] : null,
+      periodAvgDist : sim.period_avg_dist ?? null,
+      periodAvgPnl  : sim.period_avg_pnl ?? null,
+      weNeed        : sim.we_need ?? null,
+    };
+  }, [dashboard]);
+  useEffect(() => {
+    const json = simulationPositions ? JSON.stringify(simulationPositions) : null;
+    if (json !== prevSimJsonRef.current) {
+      prevSimJsonRef.current = json;
+      if (simulationPositions) setSimUpdatedAt(Date.now());
+    }
+  }, [simulationPositions]);
+  /* позиции → массив для графиков */
+  const chartPositions = useMemo(
+    () => Object.entries(stages).map(([k, v]) => ({ key: k, visible: visible[k], ...v })),
+    [stages, visible],
+  );
   /* группируем по монетам */
   const positionsByCoin = useMemo(() => {
     const m = {};
-    chartPositions.forEach(p => (m[`${p.baseCoin}USDT`] ||= []).push(p));
+    chartPositions.forEach((p) => (m[`${p.baseCoin}USDT`] ||= []).push(p));
     return m;
   }, [chartPositions]);
-  /* список монет для вкладок */
+  /* список вкладок */
   const tabCoins = Object.keys(positionsByCoin).length
     ? Object.keys(positionsByCoin)
     : [settings.coin];
@@ -232,65 +285,122 @@ export default function App() {
     candleCount: 0,
     reconnect: () => {},
   });
-    useEffect(() => {
-    if (chartStatus.coin && chartStatus.coin !== form.coin) {
+  /* -- СИНХРОН С «Coin» ТОЛЬКО ЕСЛИ ФАКТИЧЕСКИ ПОМЕНЯЛСЯ АКТИВНЫЙ ГРАФИК ---- */
+  const prevChartCoinRef = useRef(chartStatus.coin);
+  useEffect(() => {
+    if (
+      chartStatus.coin &&
+      chartStatus.coin !== form.coin &&
+      chartStatus.coin !== prevChartCoinRef.current
+    ) {
       setForm((prev) => ({ ...prev, coin: chartStatus.coin }));
     }
+    prevChartCoinRef.current = chartStatus.coin;
   }, [chartStatus.coin, form.coin]);
   /* ─── JSX ──────────────────────────────────────────────── */
   return (
     <div className="app-container">
       {/* верхняя панель настроек */}
       <form className="form-row" onSubmit={onSubmit}>
-        <label>Coin
-          <input name="coin" value={form.coin} onChange={onChange} autoComplete="off" spellCheck="false" />
+        <label>
+          Coin
+          <input
+            name="coin"
+            value={form.coin}
+            onChange={onChange}
+            autoComplete="off"
+            spellCheck="false"
+          />
         </label>
-        <label>Candles
-          <input type="number" name="number_candles" min="1" max="1500" value={form.number_candles} onChange={onChange}/>
+        <label>
+          Candles
+          <input
+            type="number"
+            name="number_candles"
+            min="1"
+            max="1500"
+            value={form.number_candles}
+            onChange={onChange}
+          />
         </label>
-        <label>Interval&nbsp;(m)
-          <input type="number" name="interv" min="1" value={form.interv} onChange={onChange}/>
+        <label>
+          Interval&nbsp;(m)
+          <input
+            type="number"
+            name="interv"
+            min="1"
+            value={form.interv}
+            onChange={onChange}
+          />
         </label>
         <label className="checkbox">
-          <input type="checkbox" checked={visible.first}  onChange={e=>setVisible(p=>({...p,first :e.target.checked}))}/> first
+          <input
+            type="checkbox"
+            checked={visible.first}
+            onChange={(e) => setVisible((p) => ({ ...p, first: e.target.checked }))}
+          />
+          first
         </label>
         <label className="checkbox">
-          <input type="checkbox" checked={visible.second} onChange={e=>setVisible(p=>({...p,second:e.target.checked}))}/> second
+          <input
+            type="checkbox"
+            checked={visible.second}
+            onChange={(e) => setVisible((p) => ({ ...p, second: e.target.checked }))}
+          />
+          second
         </label>
         <button type="submit">Load</button>
       </form>
       {/* контент */}
       <div className="main-content">
-          <ChartTabs
-            coins={tabCoins}
-            number_candles={settings.number_candles}
-            interv={settings.interv}
-            positionsByCoin={positionsByCoin}
-            onStatusChange={setChartStatus}
-          />
-          <StatsPanel
-            stages={{
-              first : stages.first  && { futPnl:stages.first.futPnl,  optPnl:stages.first.optPnl,  total:Number(stages.first.futPnl||0)+Number(stages.first.optPnl||0) },
-              second: stages.second && { futPnl:stages.second.futPnl, optPnl:stages.second.optPnl, total:Number(stages.second.futPnl||0)+Number(stages.second.optPnl||0) },
-            }}
-            totals={totals}
-          />
+        <ChartTabs
+          coins={tabCoins}
+          number_candles={settings.number_candles}
+          interv={settings.interv}
+          positionsByCoin={positionsByCoin}
+          onStatusChange={setChartStatus}
+        />
+        <StatsPanel
+          stages={{
+            first : stages.first  && {
+              futPnl: stages.first.futPnl,
+              optPnl: stages.first.optPnl,
+              total : Number(stages.first.futPnl || 0) + Number(stages.first.optPnl || 0),
+            },
+            second: stages.second && {
+              futPnl: stages.second.futPnl,
+              optPnl: stages.second.optPnl,
+              total : Number(stages.second.futPnl || 0) + Number(stages.second.optPnl || 0),
+            },
+          }}
+          totals={totals}
+        />
       </div>
       {/* прогресс-бары */}
-      {['first','second'].map(k => {
+      {['first', 'second'].map((k) => {
         const pr = stages[k]?.progress;
         if (!pr || pr.remaining == null) return null;
         const lbl = `${k}: прошло ${pr.elapsed.toFixed(1)} ч / осталось ${pr.remaining.toFixed(1)} ч`;
         return (
-          <div className="progress-wrapper" key={'p'+k}>
+          <div className="progress-wrapper" key={'p' + k}>
             <div className="progress-label">{lbl}</div>
             <div className="progress-bar">
-              <div className="progress-fill-absolute" style={{width:`${pr.percent}%`, background:stages[k].colors.entry}}/>
+              <div
+                className="progress-fill-absolute"
+                style={{ width: `${pr.percent}%`, background: stages[k].colors.entry }}
+              />
             </div>
           </div>
         );
       })}
+      {/* таблица опционов first/second */}
       <OptionTable stages={stages} />
+      {/* таблица simulation + таймер + метрики */}
+      <SimulationTable
+        positions={simulationPositions}
+        updatedAt={simUpdatedAt}
+        simMeta={simMeta}
+      />
       {/* нижняя строка */}
       <div className="status-bar">
         <span>
@@ -299,12 +409,24 @@ export default function App() {
           {!chartStatus.wsConnected && (
             <button
               type="button"
-              onClick={chartStatus.reconnect}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                try { chartStatus.reconnect?.(); } catch (err) { console.error(err); }
+              }}
               title="Reconnect WebSocket now"
+              aria-label="Reconnect WebSocket"
               style={{
-                marginLeft:6,padding:'0 6px',background:'#333',color:'#fff',
-                border:'1px solid #555',borderRadius:3,cursor:'pointer',
-                fontSize:12,lineHeight:'14px',
+                marginLeft   : 6,
+                padding      : '0 6px',
+                background   : '#333',
+                color        : '#fff',
+                border       : '1px solid #555',
+                borderRadius : 3,
+                cursor       : 'pointer',
+                fontSize     : 12,
+                lineHeight   : '14px',
+                pointerEvents: 'auto',
               }}
             >
               ↻
@@ -345,329 +467,285 @@ const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app, firebaseConfig.databaseURL);
 --------------------------------------------------------------------------------
 ./src/index.css:
+/* === Палитра и базовые переменные === */
+:root{
+  --bg: #0f0f0f;
+  --panel: #161616;
+  --panel-2: #181818;
+  --border: #2a2a2a;
+  --text: #f1f1f1;
+  --muted: #a8a8a8;
+  --accent: #3a7afe;
+  --accent-2: #6a5acd;
+}
 /* === Базовая типографика и сброс === */
 html, body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
-  background: #0f0f0f;
-  color: #f5f5f5;
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   -webkit-tap-highlight-color: transparent;
-  overflow-y: auto;
 }
-* {
-  box-sizing: border-box;
-}
-a {
-  color: #61dafb;
-}
+* { box-sizing: border-box; }
+a { color: #61dafb; }
 /* === Контейнер приложения === */
-.app-container{
+.app-container {
+  width: 100%;
+  min-height: 100%;
   overflow-x: hidden;
-  overflow-y: auto;       /* вертикальный скролл на всём приложении          */
+  overflow-y: auto;
+  touch-action: pan-x pan-y;
 }
-/* === Форма === */
+/* === Верхняя форма === */
 .form-row {
-  display: flex;
-  gap: 8px;
-  padding: 8px;
-  background: #181818;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  z-index: 2;           /* гарантируем, что форма сверху */
-  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
 }
 .form-row label {
   display: flex;
   flex-direction: column;
   font-size: 12px;
-  gap: 4px;
-  min-width: 90px;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
 }
 .form-row input,
 .form-row select {
-  padding: 6px 8px;
-  border: 1px solid #333;
-  border-radius: 4px;
-  background: #222;
-  color: #fff;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #202020;
+  color: var(--text);
   font-size: 14px;
-  width: 100%;
+  outline: none;
+}
+.form-row input:focus,
+.form-row select:focus {
+  border-color: #3a3a3a;
+  box-shadow: 0 0 0 2px rgba(58,122,254,0.15);
+}
+.form-row label.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-start;
 }
 .form-row button {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 4px;
-  background: #3a7afe;
+  padding: 10px 12px;
+  border: 1px solid #2b2b2b;
+  border-radius: 6px;
+  background: linear-gradient(180deg, var(--accent), #2b62e6);
   color: #fff;
-  font-weight: bold;
+  font-weight: 700;
   cursor: pointer;
-  flex-grow: 1;
+  transition: transform .06s ease, filter .2s ease;
 }
-.form-row button:active {
-  opacity: 0.8;
+.form-row button:active { transform: translateY(1px); }
+.form-row button:hover { filter: brightness(1.05); }
+/* === Основной блок: график + правая панель === */
+.main-content{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  column-gap: 14px;
+  align-items: start;
+  width: 100%;
 }
-/* === Обёртка и контейнер графика === */
+/* Контейнер вкладок/графика */
+.chart-tabs-root{
+  min-width: 0;
+}
+/* Обёртка и контейнер графика */
 .chart-wrapper{
-  /* было: height:100%  ― сбивало высоту, если родитель сам не фиксирован   */
+  width: 100%;
   height: auto;
-  min-height: 550px;      /* safeguard, как и раньше                         */
+  min-height: 60vh;
+  background: #121212;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset, 0 10px 30px rgba(0,0,0,0.35);
 }
 .chart-container {
   width: 100%;
   height: 100%;
 }
-/* === Строка статуса === */
-.status-bar {
-  padding: 6px 10px;
+/* Вкладки графиков */
+.chart-tabs-header {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px 0 10px;
+  background: transparent;
+}
+.chart-tabs-header .tab {
+  padding: 6px 12px;
+  background: #202020;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  cursor: pointer;
   font-size: 12px;
-  background: #181818;
-  border-top: 1px solid #333;
+  color: #d0d0d0;
+  border-radius: 8px 8px 0 0;
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+.chart-tabs-header .tab:hover { background: #242424; }
+.chart-tabs-header .tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: #2554d6;
+}
+/* Правая панель (статистика) */
+.stats-panel{
+  position: sticky;
+  top: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+.stats-title {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ddd;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pos-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.stats-row {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  flex-wrap: wrap;
-  z-index: 2;
-  position: relative;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+  color: #ddd;
 }
-/* === Временные отладочные рамки === */
-.form-row, .status-bar, .chart-wrapper {
-  /* outline: 1px solid red;  */
+.stats-row.total { font-weight: 600; }
+.overall-row { margin-top: 10px; }
+/* Эффект вспышки чисел */
+.flash-val {
+  transition: transform 0.4s ease, background 0.4s ease;
+  padding: 0 4px;
+  border-radius: 4px;
 }
-/* === Прогресс === */
-/* Первая версия (в оригинале) */
+.flash-val.flash { transform: scale(1.12); }
+.flash-val.up   { background: rgba(0, 200, 0, 0.15); }
+.flash-val.down { background: rgba(220, 0, 0, 0.15); }
+/* Таблица в StatsPanel */
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.stats-table th,
+.stats-table td { padding: 6px 8px; }
+.stats-table thead th {
+  background: #1e1e1e;
+  color: #cfcfcf;
+  border-bottom: 1px solid var(--border);
+}
+.stats-table .metric-cell { text-align: left; color: #ccc; }
+.stats-table .data-cell   { text-align: right; }
+/* === Прогресс-бары === */
 .progress-wrapper {
-  padding: 8px 12px;
-  background: #181818;
-  border-top: 1px solid #333;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border-top: 1px solid var(--border);
 }
 .progress-label {
   font-size: 12px;
-  margin-bottom: 4px;
-  color: #ccc;
+  margin-bottom: 6px;
+  color: #cfcfcf;
 }
 .progress-bar {
-  width: 100%;
-  height: 6px;
-  background: #333;
-  border-radius: 3px;
-  overflow: hidden;
-  position: relative;
-}
-.progress-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 35%;
-  background: linear-gradient(90deg, #6a5acd, #8a2be2);
-  animation: progressAnim 2s infinite linear;
-  opacity: 0.7;
-}
-@keyframes progressAnim {
-  0%   { transform: translateX(-35%); }
-  100% { transform: translateX(100%); }
-}
-/* Альтернативные/дополнительные варианты из повторов */
-.progress-fill-static {
-  height: 100%;
-  background: linear-gradient(90deg, #6a5acd, #8a2be2);
-  transition: width 0.4s ease;
-}
-/* Вторая версия (в оригинале) */
-.progress-bar {
-  /* Обратите внимание: перепределяет некоторые свойства, как в исходнике */
   width: 100%;
   height: 8px;
-  background: #333;
-  border-radius: 4px;
+  background: #2a2a2a;
+  border-radius: 5px;
   overflow: hidden;
   position: relative;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
 }
 .progress-fill-absolute {
   position: absolute;
   top: 0;
   left: 0;
   height: 100%;
-  background: linear-gradient(90deg, #6a5acd, #8a2be2);
-  transition: width 0.4s ease;
+  background: linear-gradient(90deg, var(--accent-2), #8a2be2);
+  transition: width 0.35s ease;
+  opacity: 0.9;
 }
-/* === Опционная таблица === */
+/* === Опционная/симуляционная таблица === */
 .option-table-wrapper {
-  padding: 8px 12px;
-  background: #181818;
-  border-top: 1px solid #333;
-  font-size: 13px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border-top: 1px solid var(--border);
 }
 .option-table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.option-table thead th {
+  background: #1f1f1f;
+  color: #dcdcdc;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
 }
 .option-table td {
-  padding: 4px 6px;
-  border-bottom: 1px solid #2a2a2a;
+  padding: 6px 10px;
+  border-bottom: 1px solid #222;
   color: #ddd;
 }
+.option-table tr:nth-child(even) td { background: #141414; }
 .option-table td:first-child {
-  color: #888;
-  width: 140px;
+  color: #9a9a9a;
+  width: 160px;
 }
-/* === Основной блок === */
-.main-content{
-  display: flex;          /* оставляем строкой                               */
-  flex-wrap: wrap;        /* …но разрешаем перенос, если ширины не хватает   */
-  overflow: visible;      /* ничего не обрезаем                              */
-  row-gap: 0;             /* чтобы не было лишних «щелей»                    */
-}
-/* === Правая панель === */
-.stats-panel{
-  flex: 0 0 240px;        /* фикс 240 px, НЕ сжимается, но «прыгает» на новую
-                             строку, когда 240 px целиком не помещается      */
-  border-left: 1px solid #333;
-  border-top: none;       /* на десктопе бордер сверху не нужен              */
-  background:#181818 !important;
-}
-.stats-title {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #ccc;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.pos-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
-.stats-row {
+/* === Строка статуса (поверх любых слоёв графика) === */
+.status-bar {
+  padding: 8px 12px;
+  font-size: 12px;
+  background: var(--panel-2);
+  border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  padding: 4px 0;
-  border-bottom: 1px solid #2a2a2a;
-  color: #ddd;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 5; /* гарантируем кликабельность кнопки перезапуска */
 }
-.stats-row.total {
-  font-weight: 600;
+/* === Мобильная верстка === */
+@media (max-width: 1024px) {
+  .chart-wrapper { min-height: 48vh; }
 }
-.flash-val {
-  transition: transform 0.5s ease, background 0.5s ease;
-  padding: 0 4px;
-  border-radius: 3px;
-}
-.flash-val.flash {
-  transform: scale(1.15);         /* «подпрыгивание» */
-}
-/* фон по направлению */
-.flash-val.up   { background: rgba(0, 255,   0, 0.15); }
-.flash-val.down { background: rgba(255, 0,   0, 0.15); }
-/* === Таблица статистики === */
-.stats-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-.stats-table th,
-.stats-table td {
-  padding: 4px 4px;
-}
-.stats-table .metric-cell {
-  text-align: left;
-  color: #ccc;
-}
-.stats-table .data-cell {
-  text-align: right;
-}
-/* === Вкладки графиков === */
-.chart-tabs-header {
-  display: flex;
-  gap: 4px;
-  padding: 4px 6px;
-  background: #181818;
-  border-bottom: 1px solid #333;
-}
-.chart-tabs-header .tab {
-  padding: 4px 10px;
-  background: #222;
-  border: 1px solid #333;
-  border-bottom: none;
-  cursor: pointer;
-  font-size: 12px;
-  color: #ccc;
-  border-radius: 4px 4px 0 0;
-}
-.chart-tabs-header .tab.active {
-  background: #3a7afe;
-  color: #fff;
-}
-.chart-tabs-root{
-  flex: 1 1 320px;        /* растягивается, но может ужаться до 320 px       */
-  min-width: 0;           /* (!) обязательно, иначе flex-элемент не сжимается*/
-}
-/* === Мобильная верстка (объединено) === */
 @media (max-width: 768px) {
-  /* родительский контейнер: разрешаем прокрутку и складываем блоки в колонку */
-  .main-content {
-    flex-direction: column;
-    overflow: visible;          /* ничего не режем */
-    height: auto;               /* не фиксируем высоту */
-  }
-  .stats-panel {
-    order: 2;
-    width: 100%;
-    flex: 0 0 auto;
-    border-left: none;
-    border-top: 1px solid #333;
-    position: relative;
-    z-index: 2;                 /* поверх всего остального */
-  }
-  .option-table-wrapper {
-    order: 3;
-    flex: 0 0 auto;
-    width: 100%;
-    position: relative;
-    z-index: 1;
-    margin-top: 8px;
-  }
-  .app-container {
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
   .form-row {
-    gap: 6px;
-    padding: 6px;
-  }
-  .form-row label {
-    flex: 1 1 calc(50% - 6px);
-    min-width: 0;
-    font-size: 11px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px 10px;
   }
   .form-row input,
-  .form-row select {
-    padding: 4px 6px;
-    font-size: 12px;
-  }
-  .form-row label.checkbox {
-    flex: 0 0 auto;
-    flex-direction: row;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    min-width: unset;
-  }
-  .form-row button {
-    flex: 1 1 100%;
-    margin-top: 2px;
-    padding: 10px 0;
-  }
-  .chart-wrapper{
-    min-height: 300px;
-    flex: 0 0 280px;
-  }
+  .form-row select { padding: 6px 8px; font-size: 13px; }
+  .form-row button { grid-column: 1 / -1; padding: 10px 0; }
+  .main-content { display: block; }
+  .stats-panel { position: relative; top: 0; margin-top: 10px; }
+  .option-table-wrapper { margin-top: 8px; }
+  .chart-wrapper{ min-height: 320px; border-radius: 8px; }
 }
 --------------------------------------------------------------------------------
 ./src/main.jsx:
@@ -692,109 +770,127 @@ import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
  *   positions – [{ key, visible, entryPx, sl, tp, qty, colors, openTime }]
  */
 export default function Chart({ candles, positions = [] }) {
-  const containerRef   = useRef(null);
-  const chartRef       = useRef(null);
-  const seriesRef      = useRef(null);
-  const userAtRightRef = useRef(true);
-  const fitDoneRef     = useRef(false);
-  const prevLenRef     = useRef(0);
-  const prevFirstRef   = useRef(null);
-  const linesRef       = useRef([]);
-  const markersRef     = useRef([]);
-  /* ——— helper: возвращаем контейнеру «нормальный» размер ——— */
-  const normalizeSize = () => {
+  const containerRef = useRef(null);
+  const chartRef     = useRef(null);
+  const seriesRef    = useRef(null);
+  const prevLen   = useRef(0);
+  const prevFirst = useRef(null);
+  const fitDone   = useRef(false);
+  const userAtEnd = useRef(true);
+  const priceLines = useRef([]);
+  const markersRef = useRef([]);
+  /* ——— подгоняем размер под фактическую высоту .chart-wrapper ——— */
+  const resizeChart = () => {
     const el = containerRef.current;
-    const ch = chartRef.current;
-    if (!el || !ch) return;
-    el.style.width = '100%';
-    el.style.height = '100%';
-    let wrapper = el;                                // .chart-container
-    while (wrapper && !wrapper.classList.contains('chart-wrapper')) {
-      wrapper = wrapper.parentElement;
+    const chart = chartRef.current;
+    if (!el || !chart) return;
+    let wrap = el;
+    while (wrap && !wrap.classList.contains('chart-wrapper')) {
+      wrap = wrap.parentElement;
     }
-    const { width, height } =
-   (wrapper || el).getBoundingClientRect();       // всегда есть 60 vh / 360 px
-    if (width > 0 && height > 0) ch.resize(width, height);
+    const target = wrap || el;
+    const { width, height } = target.getBoundingClientRect();
+    if (width > 0 && height > 0) chart.resize(width, height);
   };
-/* ——— инициализация ——— */
-useEffect(() => {
-  const el = containerRef.current;
-  if (!el) return;
-  const chart = createChart(el, {
-    layout: { background: { color: '#0f0f0f' }, textColor: '#d1d4dc' },
-    grid: { vertLines: { color: '#2B2B43' }, horzLines: { color: '#2B2B43' } },
-    crosshair: { mode: CrosshairMode.Normal },
-    rightPriceScale: { borderVisible: false },
-    timeScale: { borderVisible: false, timeVisible: true, rightOffset: 10, barSpacing: 6 },
-    handleScroll: { mouseWheel: true, pressedMouseMove: true },
-    handleScale: { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
-  });
-  const series = chart.addCandlestickSeries({
-    upColor: '#26a69a',
-    downColor: '#ef5350',
-    wickUpColor: '#26a69a',
-    wickDownColor: '#ef5350',
-    borderVisible: false,
-    priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
-  });
-  chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
-    userAtRightRef.current = chart.timeScale().scrollPosition() === 0;
-  });
-  chartRef.current = chart;
-  seriesRef.current = series;
-  normalizeSize(); // первый раз
-  const resizeObserver = new ResizeObserver(() => {
-    normalizeSize();
-  });
-  resizeObserver.observe(el);
-  window.addEventListener('orientationchange', normalizeSize);
-  return () => {
-    resizeObserver.disconnect();
-    window.removeEventListener('orientationchange', normalizeSize);
-    chart.remove();
-  };
-}, []);
-  /* ——— свечи ——— */
+  /* ——— инициализация ——— */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.style.width  = '100%';
+    el.style.height = '100%';
+    const chart = createChart(el, {
+      layout: { background: { color: '#0f0f0f' }, textColor: '#d1d4dc' },
+      grid:   { vertLines: { color: '#2B2B43' }, horzLines: { color: '#2B2B43' } },
+      crosshair: { mode: CrosshairMode.Normal },
+      rightPriceScale: { borderVisible: false },
+      timeScale: {
+        borderVisible: false,
+        timeVisible  : true,
+        rightOffset  : 10,
+        barSpacing   : 6,
+      },
+      handleScroll: { mouseWheel: true, pressedMouseMove: true },
+      handleScale : { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+    });
+    const series = chart.addCandlestickSeries({
+      upColor      : '#26a69a',
+      downColor    : '#ef5350',
+      wickUpColor  : '#26a69a',
+      wickDownColor: '#ef5350',
+      borderVisible: false,
+      priceFormat  : { type: 'price', precision: 2, minMove: 0.01 },
+    });
+    chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+      userAtEnd.current = chart.timeScale().scrollPosition() === 0;
+    });
+    chartRef.current  = chart;
+    seriesRef.current = series;
+    /* реагируем только на resize/orientationchange окна — никаких observer-ов */
+    window.addEventListener('resize', resizeChart);
+    window.addEventListener('orientationchange', resizeChart);
+    resizeChart(); // первый раз
+    return () => {
+      window.removeEventListener('resize', resizeChart);
+      window.removeEventListener('orientationchange', resizeChart);
+      chart.remove();
+    };
+  }, []);
+  /* ——— обновляем свечи ——— */
   useEffect(() => {
     const chart  = chartRef.current;
     const series = seriesRef.current;
     if (!chart || !series || candles.length === 0) return;
-    const data = candles.map(c => ({ time:c.time, open:c.open, high:c.high, low:c.low, close:c.close }));
+    const data = candles.map(c => ({
+      time : c.time,
+      open : c.open,
+      high : c.high,
+      low  : c.low,
+      close: c.close,
+    }));
     const first = data[0]?.time ?? null;
     const needReset =
-      !fitDoneRef.current ||
-      prevFirstRef.current == null ||
-      prevFirstRef.current !== first ||
-      data.length < prevLenRef.current;
+      !fitDone.current ||
+      prevFirst.current == null ||
+      prevFirst.current !== first ||
+      data.length < prevLen.current;
     if (needReset) {
       series.setData(data);
       chart.timeScale().fitContent();
-      fitDoneRef.current = true;
-      prevLenRef.current = data.length;
-      prevFirstRef.current = first;
-      normalizeSize();        // библиотека перезаписала inline-hw → чистим
+      fitDone.current  = true;
+      prevLen.current  = data.length;
+      prevFirst.current = first;
+      resizeChart(); // подгоняем один раз
     } else {
-      const diff = data.length - prevLenRef.current;
-      if (diff > 0) data.slice(-diff).forEach(b => series.update(b));
-      else series.update(data.at(-1));
-      prevLenRef.current = data.length;
+      const diff = data.length - prevLen.current;
+      if (diff > 0) {
+        data.slice(-diff).forEach(b => series.update(b));
+      } else {
+        series.update(data.at(-1));
+      }
+      prevLen.current = data.length;
     }
-    if (userAtRightRef.current) chart.timeScale().scrollToRealTime();
+    if (userAtEnd.current) chart.timeScale().scrollToRealTime();
   }, [candles]);
   /* ——— ценовые линии ——— */
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
-    linesRef.current.forEach(l => { try { series.removePriceLine(l); } catch {} });
-    linesRef.current = [];
+    priceLines.current.forEach(l => { try { series.removePriceLine(l); } catch {} });
+    priceLines.current = [];
     positions.forEach(p => {
       if (!p.visible) return;
       const add = (price, color, title) => {
         if (price == null) return;
-        linesRef.current.push(series.createPriceLine({
-          price, color, lineWidth:2, lineStyle:LineStyle.Dashed,
-          axisLabelVisible:true, title,
-        }));
+        priceLines.current.push(
+          series.createPriceLine({
+            price,
+            color,
+            lineWidth: 2,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title,
+          }),
+        );
       };
       add(p.entryPx, p.colors.entry, `${p.key} ${p.qty ?? ''}`.trim());
       add(p.sl,      p.colors.sl,    `${p.key} SL`);
@@ -819,27 +915,15 @@ useEffect(() => {
       }
       markers.push({
         time: closest,
-        position:'aboveBar',
-        color:p.colors.entry,
-        shape:'arrowDown',
-        text:'',
+        position: 'aboveBar',
+        color: p.colors.entry,
+        shape: 'arrowDown',
+        text: '',
       });
     });
     if (markers.length) series.setMarkers(markers);
     markersRef.current = markers;
   }, [positions, candles]);
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver(() => {
-      normalizeSize();
-    });
-    observer.observe(containerRef.current.parentElement);
-    window.addEventListener('orientationchange', normalizeSize);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('orientationchange', normalizeSize);
-    };
-  }, []);
   return <div ref={containerRef} className="chart-container" />;
 }
 --------------------------------------------------------------------------------
@@ -950,6 +1034,133 @@ export default function ChartTabs({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+--------------------------------------------------------------------------------
+./src/components/SimulationTable.jsx:
+import { useEffect, useState } from 'react';
+import ValueFlash from './ValueFlash.jsx';
+/**
+ * Панель simulation с таймером последнего обновления,
+ * анимированным PnL (ValueFlash) и компактными метаданными.
+ *
+ * props:
+ *   positions  – объект { position_1:{…}, position_2:{…}, … } | null
+ *   updatedAt  – время последнего получения данных (ms)       | null
+ *   simMeta    – объект { relAtr, periodAvgDist, periodAvgPnl, weNeed } | null
+ */
+export default function SimulationTable({ positions = null, updatedAt = null, simMeta = null }) {
+  /* ——— таймер «секунд с последнего обновления» ——— */
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const secondsAgo =
+    updatedAt == null ? null : Math.max(0, Math.floor((now - updatedAt) / 1000));
+  /* ——— данные существуют? ——— */
+  const order = ['position_1', 'position_2', 'position_3'].filter(
+    (k) => positions && positions[k]
+  );
+  if (!order.length) return null;
+  /* строки-метрики (PnL – первый, flash = true) */
+  const rows = [
+    { label: 'PnL', key: 'pnl', fmt: (v) => v.toFixed(2), flash: true },
+    { label: 'Symbol',        key: 'symbol' },
+    { label: 'Ask',           key: 'ask',          fmt: (v) => v.toFixed(2) },
+    { label: 'Ask original',  key: 'askOriginal',  fmt: (v) => v.toFixed(2) },
+    { label: 'Target bid',    key: 'bestTargBid',  fmt: (v) => v.toFixed(2) },
+    { label: 'PnL upper',     key: 'pnlUpper',     fmt: (v) => v.toFixed(2) },
+    { label: 'p_t',           key: 'pt',           fmt: (v) => v.toFixed(2) },
+    { label: 'Strike %',      key: 'strikePerc',   fmt: (v) => v.toFixed(4) },
+    { label: 'Lower %',       key: 'lowerPerc',    fmt: (v) => v.toFixed(4) },
+    { label: 'Upper %',       key: 'upperPerc',    fmt: (v) => v.toFixed(4) },
+    { label: 'Max amount',    key: 'maxAmount' },
+    {
+      label: 'Ask indicators',
+      key: 'askIndicators',
+      fmt: (v) =>
+        Array.isArray(v) ? v.map((n) => n.toFixed(2)).join(' / ') : '-',
+    },
+  ];
+  /* ——— компактная строка с таймером + метаданными симуляции ——— */
+  const metaLabel = (title, val, fmt) => (
+    <span title={title} style={{ whiteSpace: 'nowrap' }}>
+      {title}: {val == null ? '—' : fmt ? fmt(val) : val}
+    </span>
+  );
+  return (
+    <div className="option-table-wrapper">
+      {/* --- таймер и метрики в одну строку --- */}
+      <div
+        style={{
+          fontSize: 12,
+          marginBottom: 4,
+          color: '#ccc',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexWrap: 'wrap',
+        }}
+      >
+        <span>
+          Last update:&nbsp;{secondsAgo == null ? '—' : `${secondsAgo}s ago`}
+        </span>
+        {simMeta && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', color: '#ddd' }}>
+            {metaLabel('ATR(rel)', simMeta.relAtr, (v) => Number(v).toFixed(4))}
+            {metaLabel('Dist(avg)', simMeta.periodAvgDist, (v) => Number(v).toFixed(4))}
+            {metaLabel('PnL(avg)', simMeta.periodAvgPnl, (v) => Number(v).toFixed(3))}
+            {metaLabel('Need', simMeta.weNeed)}
+          </div>
+        )}
+      </div>
+      {/* --- таблица --- */}
+      <table className="option-table">
+        <thead>
+          <tr>
+            <th style={{ width: 140 }}></th>
+            {order.map((k) => (
+              <th key={k}>{k.replace('position_', 'sim_')}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({ label, key, fmt, flash }) => (
+            <tr key={key}>
+              <td>{label}</td>
+              {order.map((k) => {
+                const val = positions[k]?.[key];
+                /* ячейки PnL – ValueFlash */
+                if (flash) {
+                  return (
+                    <td
+                      key={k + key}
+                      style={{ fontWeight: 600, fontSize: 14 }}
+                    >
+                      {val == null ? (
+                        '-'
+                      ) : (
+                        <ValueFlash
+                          value={val}
+                          formatter={(v) => v.toFixed(2)}
+                        />
+                      )}
+                    </td>
+                  );
+                }
+                /* остальные ячейки */
+                return (
+                  <td key={k + key}>
+                    {val == null ? '-' : fmt ? fmt(val) : val}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -1089,9 +1300,11 @@ export function useBinanceKlines(settings) {
   const [candles,      setCandles]     = useState([]);
   const [loading,      setLoading]     = useState(false);
   const [wsConnected,  setWsConnected] = useState(false);
-  const wsRef        = useRef(null);
-  const reconnectRef = useRef(null);   // id тайм-аута на авто-reconnect
-  const closedManual = useRef(false);  // true → размонтирование компонента
+  const wsRef           = useRef(null);
+  const reconnectRef    = useRef(null);    // id тайм-аута авто-переподключения
+  const closedManual    = useRef(false);   // размонтирование хука
+  const manualReconnect = useRef(false);   // флаг «мы закрываем WS намеренно ради ручного reconnect»
+  const connectingRef   = useRef(false);   // защита от параллельных connectWS()
   /* ---------- начальная загрузка свечей ---------- */
   const loadInitial = useCallback(async (signal) => {
     setLoading(true);
@@ -1109,14 +1322,23 @@ export function useBinanceKlines(settings) {
     }
   }, [coin, number_candles, interv]);
   /* ---------- функция подключения к WS (может вызываться повторно) ---------- */
-  const connectWS = useCallback(() => {
+  const connectWS = useCallback(async () => {
+    if (connectingRef.current) return;
+    connectingRef.current = true;
     if (reconnectRef.current) {
       clearTimeout(reconnectRef.current);
       reconnectRef.current = null;
     }
+    manualReconnect.current = true;
     if (wsRef.current) {
       try { wsRef.current.close(); } catch {}
       wsRef.current = null;
+    }
+    try {
+      const fresh = await fetchKlines(coin, number_candles, interv);
+      setCandles(fresh);
+    } catch (e) {
+      console.warn('Reconnect fetch klines failed (will continue with WS):', e);
     }
     const ws = createKlineWebSocket(coin, interv, (candle) => {
       setCandles(prev => {
@@ -1130,31 +1352,34 @@ export function useBinanceKlines(settings) {
         return candle.time > last.time ? [...prev, candle] : prev;
       });
     });
-    /* ---- обработка состояний ---- */
-    ws.onopen = () => {
-      setWsConnected(true);            // соединение успешно открыто
-      if (reconnectRef.current) {
-        clearTimeout(reconnectRef.current);
-        reconnectRef.current = null;
-      }
-    };
     const scheduleReconnect = () => {
       if (closedManual.current || reconnectRef.current) return;
       reconnectRef.current = setTimeout(() => {
         reconnectRef.current = null;
-        connectWS();                   // пробуем снова
+        connectWS(); // пробуем снова
       }, 5_000);
     };
+    ws.onopen = () => {
+      setWsConnected(true);
+      if (reconnectRef.current) {
+        clearTimeout(reconnectRef.current);
+        reconnectRef.current = null;
+      }
+      manualReconnect.current = false;
+      connectingRef.current = false;
+    };
     ws.onclose = () => {
-      setWsConnected(false);           // потеряли соединение
-      scheduleReconnect();             // планируем автоматический reconnect
+      setWsConnected(false);
+      if (!manualReconnect.current) {
+        scheduleReconnect();
+      }
     };
     ws.onerror = (err) => {
       console.error('WebSocket error', err);
       try { ws.close(); } catch {}
     };
     wsRef.current = ws;
-  }, [coin, interv]);
+  }, [coin, interv, number_candles]);
   /* ---------- эффекты ---------- */
   useEffect(() => {
     const ac = new AbortController();
@@ -1178,7 +1403,7 @@ export function useBinanceKlines(settings) {
     candles,
     loading,
     wsConnected,
-    reconnect: connectWS,    // ручное переподключение
+    reconnect: connectWS,    // ручное мгновенное переподключение
   };
 }
 --------------------------------------------------------------------------------
