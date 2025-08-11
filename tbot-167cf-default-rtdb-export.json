@@ -3,162 +3,170 @@
     "exist": true,
     "stages": {
       "first": {
-        "amount": 2,
-        "base_coin": "ETH",
+        "amount": 5,
+        "base_coin": "BTC",
         "exist": true,
-        "expect": 0.32,
-        "lower_perc": 0.05867266412889548,
-        "over_strike": 0.04,
+        "expect": 0.25,
+        "lower_perc": 0.03798450478721395,
+        "over_strike": 0.025,
         "position": {
           "exist": true,
           "leg": {
-            "contracts": 0.1,
-            "deliveryTime": 1754812800000,
+            "contracts": 0.01,
+            "deliveryTime": 1754985600000,
             "exist": true,
-            "hours_to_exp": 14.183230515277778,
+            "hours_to_exp": 12.371714880555555,
             "info": {
-              "avgPrice": 13.2,
-              "curRealisedPnl": -0.0924,
-              "markPrice": 3.56802314,
-              "max_size": 27.8,
-              "positionValue": 0.35680231,
+              "avgPrice": 360,
+              "curRealisedPnl": -0.252,
+              "markPrice": 960.89166442,
+              "max_size": 9.42,
+              "positionValue": 9.60891664,
               "side": "Buy",
-              "size": 0.1,
-              "symbol": "ETH-10AUG25-4100-P-USDT",
-              "unrealisedPnl": -0.9500000000000001,
-              "used_bid": 3.7
+              "size": 0.01,
+              "symbol": "BTC-12AUG25-120000-P-USDT",
+              "unrealisedPnl": 5,
+              "used_bid": 860
             },
-            "name": "ETH-10AUG25-4100-P-USDT",
-            "tp_id": "h-TP-c33f9572a7ae490c9f"
+            "name": "BTC-12AUG25-120000-P-USDT",
+            "tp_id": "h-TP-c364c9f8dd8f4c7098"
           },
-          "open_time": "2025-08-09 08:28:47.481000+00:00",
-          "pnl_target": 3.8314557931831437,
+          "open_time": "2025-08-11 08:00:22.250000+00:00",
+          "pnl_target": 10.3970969117955,
           "position_info": {
-            "entryPx": 4185.1,
-            "positionValue": 182.736,
+            "entryPx": 121609,
+            "positionValue": 582.22304,
             "side": 1,
-            "size": 0.0432,
-            "unrealizedPnl": 1.93968
+            "size": 0.00488,
+            "unrealizedPnl": -11.22888
           }
         },
-        "rel_atr": 0.009256,
-        "rsi": 75.92,
-        "to_exp_init": 23.524349196944446,
-        "upper_perc": 0.0300000000000001
+        "rel_atr": 0.004453,
+        "rsi": 70.32,
+        "to_exp_init": 23.99746599777778,
+        "upper_perc": 0.02499999999999995
       },
       "second": {
-        "amount": 4,
-        "base_coin": "SOL",
-        "exist": false,
-        "expect": 0.5,
-        "lower_perc": 0.03,
-        "over_strike": 0.2,
+        "amount": 10,
+        "base_coin": "BTC",
+        "exist": true,
+        "expect": 0.45,
+        "lower_perc": 0.03572190990227307,
+        "over_strike": 0.03,
         "position": {
-          "exist": false,
+          "exist": true,
           "leg": {
-            "contracts": 0,
-            "deliveryTime": 0,
-            "exist": false,
-            "hours_to_exp": 0,
+            "contracts": 0.02,
+            "deliveryTime": 1754985600000,
+            "exist": true,
+            "hours_to_exp": 12.371084654444445,
             "info": {
-              "avgPrice": 0,
-              "curRealisedPnl": 0,
-              "markPrice": 0,
-              "positionValue": 0,
-              "size": 0,
-              "unrealisedPnl": 0,
-              "used_bid": 0
+              "avgPrice": 515,
+              "curRealisedPnl": -0.721,
+              "markPrice": 1820.25530387,
+              "max_size": 22.41,
+              "positionValue": 36.40510607,
+              "side": "Buy",
+              "size": 0.02,
+              "symbol": "BTC-12AUG25-121000-P-USDT",
+              "unrealisedPnl": 22.8,
+              "used_bid": 1655
             },
-            "name": ""
+            "name": "BTC-12AUG25-121000-P-USDT",
+            "tp_id": "h-TP-944eea9f6dde4f4ea1"
           },
-          "open_time": "",
-          "pnl_target": 0,
+          "open_time": "2025-08-11 09:01:42.440000+00:00",
+          "pnl_target": 17.789489792430523,
           "position_info": {
-            "entryPx": 0,
-            "positionValue": 0,
-            "side": 0,
-            "size": 0,
-            "unrealizedPnl": 0
+            "entryPx": 121735,
+            "positionValue": 1462.71608,
+            "side": 1,
+            "size": 0.01226,
+            "unrealizedPnl": -29.75502
           }
         },
-        "rel_atr": 0.08,
-        "rsi": 55.4,
-        "to_exp_init": 0,
-        "upper_perc": 0.02
+        "rel_atr": 0.004471,
+        "rsi": 70.94,
+        "to_exp_init": 22.973959776111112,
+        "upper_perc": 0.020000000000000073
       },
       "simulation": {
         "atr": [
-          40,
-          0.009576
+          642,
+          0.005384
         ],
-        "last_px": 4228.08,
-        "period_avg_dist": 0.0156,
-        "period_avg_pnl": 0.395,
+        "fut_perc": 0.8,
+        "last_px": 119233.62,
+        "period_avg_dist": 0.010975,
+        "period_avg_pnl": 2.785833333333333,
         "position_1": {
-          "ask": 0.755,
+          "ask": 3.5,
           "ask_indicators": [
-            73.82,
-            1.71
+            16.54,
+            1.59
           ],
-          "ask_original": 15.1,
-          "best_targ_bid": 84,
-          "lower_perc": 0.037412193336303246,
-          "max_amount": 535.2,
-          "name": "ETH",
-          "p_t": 0.025,
-          "pnl": 0.09,
-          "pnl_upper": 1.3256043640612711,
-          "qty": 0.019680165982734036,
-          "strike_perc": 0.01289460893892223,
-          "symbol": "ETH-10AUG25-4175-P-USDT",
+          "ask_original": 350,
+          "best_targ_bid": 1072.8000543266564,
+          "iv": 0.2593,
+          "lower_perc": 0.011861124926636789,
+          "max_amount": 14.68,
+          "name": "BTC",
+          "p_t": 0.009745000509312405,
+          "pnl": 7.3,
+          "pnl_lower": 0.5057384943572965,
+          "pnl_upper": 2.022953977429192,
+          "q_frac": 0.009745000509312405,
+          "qty": 0.004752406033252211,
+          "strike_perc": 0.0021415253166386177,
+          "symbol": "BTC-12AUG25-119000-P-USDT",
           "type": "put",
-          "upper_perc": 0.024999999999999828
+          "upper_perc": 0.009745000509312539
         },
         "position_2": {
-          "ask": 0.755,
+          "ask": 0.9269999999999999,
           "ask_indicators": [
-            73.82,
-            1.71
+            7.56,
+            2.28
           ],
-          "ask_original": 15.1,
-          "best_targ_bid": 84,
-          "lower_perc": 0.037412193336303246,
-          "max_amount": 535.2,
-          "name": "ETH",
-          "p_t": 0.025,
-          "pnl": 0,
-          "pnl_upper": 0.9585402412162761,
-          "qty": 0.020260192752001808,
-          "strike_perc": 0.01289460893892223,
-          "symbol": "ETH-10AUG25-4175-P-USDT",
+          "ask_original": 515,
+          "best_targ_bid": 3200,
+          "lower_perc": 0.03572190990227307,
+          "max_amount": 2.42,
+          "name": "BTC",
+          "p_t": 0.03,
+          "pnl": 0.76,
+          "pnl_upper": 1.5604815607395195,
+          "qty": 0.0010218215764433876,
+          "strike_perc": 0.005933879407851289,
+          "symbol": "BTC-12AUG25-121000-P-USDT",
           "type": "put",
-          "upper_perc": 0.020000000000000122
+          "upper_perc": 0.020000000000000073
         },
         "position_3": {
-          "ask": 1.185,
+          "ask": 0.9269999999999999,
           "ask_indicators": [
-            87.81,
-            1.88
+            7.56,
+            2.28
           ],
-          "ask_original": 23.7,
-          "best_targ_bid": 129.75,
-          "lower_perc": 0.046545914578713266,
-          "max_amount": 42.3,
-          "name": "ETH",
-          "p_t": 0.04,
-          "pnl": -0.22,
-          "pnl_upper": 1.922774219555055,
-          "qty": 0.024496693338307885,
-          "strike_perc": 0.006865474361904836,
-          "symbol": "ETH-10AUG25-4200-P-USDT",
+          "ask_original": 515,
+          "best_targ_bid": 2700,
+          "lower_perc": 0.030751404283212623,
+          "max_amount": 2.42,
+          "name": "BTC",
+          "p_t": 0.025,
+          "pnl": 0.73,
+          "pnl_upper": 1.4028385523589666,
+          "qty": 0.0009570641004961869,
+          "strike_perc": 0.005933879407851289,
+          "symbol": "BTC-12AUG25-121000-P-USDT",
           "type": "put",
-          "upper_perc": 0.029999999999999964
+          "upper_perc": 0.020000000000000073
         },
-        "rsi": 71.54,
-        "time_to_exp": 14.1900752375,
-        "we_need": "second"
+        "rsi": 42.91,
+        "time_to_exp": 12.372652200555555,
+        "we_need": "nothing"
       }
     },
-    "time": "2025-08-09 18:49:00.370190"
+    "time": "2025-08-11 20:37:44.096279"
   }
 }

@@ -188,6 +188,10 @@ export default function App() {
         pnlUpper    : p.pnl_upper,
         strikePerc  : p.strike_perc,
         upperPerc   : p.upper_perc,
+        qty         : p.qty,
+        pnlLower    : p.pnl_lower,
+        iv          : p.iv,
+        qFrac       : p.q_frac,
       };
     });
     return Object.keys(map).length ? map : null;

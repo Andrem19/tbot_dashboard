@@ -29,16 +29,26 @@ export default function SimulationTable({ positions = null, updatedAt = null, si
   /* строки-метрики (PnL – первый, flash = true) */
   const rows = [
     { label: 'PnL', key: 'pnl', fmt: (v) => v.toFixed(2), flash: true },
-    { label: 'Symbol',        key: 'symbol' },
-    { label: 'Ask',           key: 'ask',          fmt: (v) => v.toFixed(2) },
-    { label: 'Ask original',  key: 'askOriginal',  fmt: (v) => v.toFixed(2) },
-    { label: 'Target bid',    key: 'bestTargBid',  fmt: (v) => v.toFixed(2) },
-    { label: 'PnL upper',     key: 'pnlUpper',     fmt: (v) => v.toFixed(2) },
-    { label: 'p_t',           key: 'pt',           fmt: (v) => v.toFixed(2) },
-    { label: 'Strike %',      key: 'strikePerc',   fmt: (v) => v.toFixed(4) },
-    { label: 'Lower %',       key: 'lowerPerc',    fmt: (v) => v.toFixed(4) },
-    { label: 'Upper %',       key: 'upperPerc',    fmt: (v) => v.toFixed(4) },
-    { label: 'Max amount',    key: 'maxAmount' },
+
+    { label: 'Symbol',       key: 'symbol' },
+    { label: 'Ask',          key: 'ask',          fmt: (v) => v.toFixed(2) },
+    { label: 'Ask original', key: 'askOriginal',  fmt: (v) => v.toFixed(2) },
+    { label: 'Target bid',   key: 'bestTargBid',  fmt: (v) => v.toFixed(2) },
+
+    { label: 'p_t',          key: 'pt',           fmt: (v) => v.toFixed(4) },
+    { label: 'Qty',          key: 'qty',          fmt: (v) => v.toFixed(6) },
+
+    { label: 'IV',           key: 'iv',           fmt: (v) => v.toFixed(4) },
+    { label: 'q_frac',       key: 'qFrac',        fmt: (v) => v.toFixed(6) },
+
+    { label: 'PnL lower',    key: 'pnlLower',     fmt: (v) => v.toFixed(2) },
+    { label: 'PnL upper',    key: 'pnlUpper',     fmt: (v) => v.toFixed(2) },
+
+    { label: 'Strike %',     key: 'strikePerc',   fmt: (v) => v.toFixed(4) },
+    { label: 'Lower %',      key: 'lowerPerc',    fmt: (v) => v.toFixed(4) },
+    { label: 'Upper %',      key: 'upperPerc',    fmt: (v) => v.toFixed(4) },
+
+    { label: 'Max amount',   key: 'maxAmount' },
     {
       label: 'Ask indicators',
       key: 'askIndicators',
@@ -98,7 +108,7 @@ export default function SimulationTable({ positions = null, updatedAt = null, si
               <td>{label}</td>
               {order.map((k) => {
                 const val = positions[k]?.[key];
-                /* ячейки PnL – ValueFlash */
+
                 if (flash) {
                   return (
                     <td
@@ -116,7 +126,7 @@ export default function SimulationTable({ positions = null, updatedAt = null, si
                     </td>
                   );
                 }
-                /* остальные ячейки */
+
                 return (
                   <td key={k + key}>
                     {val == null ? '-' : fmt ? fmt(val) : val}
