@@ -1,22 +1,19 @@
-// src/components/Chart.jsx
 import { useEffect, useRef } from 'react';
 import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
 
 /**
  * props:
  *   candles   – [{ time, open, high, low, close }]
- *   positions – [{ key, visible, entryPx, sl, tp, qty, colors, openTime }]
+ *   positions – [{ key, visible, entryPx, sl, tp, qty, colors, openTime, optType? }]
  */
 export default function Chart({ candles, positions = [] }) {
   const containerRef = useRef(null);
   const chartRef     = useRef(null);
   const seriesRef    = useRef(null);
-
   const prevLen   = useRef(0);
   const prevFirst = useRef(null);
   const fitDone   = useRef(false);
   const userAtEnd = useRef(true);
-
   const priceLines = useRef([]);
   const markersRef = useRef([]);
 
@@ -25,8 +22,6 @@ export default function Chart({ candles, positions = [] }) {
     const el = containerRef.current;
     const chart = chartRef.current;
     if (!el || !chart) return;
-
-    // .chart-wrapper — ближайший родитель по классу
     let wrap = el;
     while (wrap && !wrap.classList.contains('chart-wrapper')) {
       wrap = wrap.parentElement;
@@ -40,8 +35,6 @@ export default function Chart({ candles, positions = [] }) {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-
-    // контейнеру нужны 100 % ширины/высоты, но этого достаточно один раз
     el.style.width  = '100%';
     el.style.height = '100%';
 
@@ -76,12 +69,9 @@ export default function Chart({ candles, positions = [] }) {
     chartRef.current  = chart;
     seriesRef.current = series;
 
-    /* реагируем только на resize/orientationchange окна — никаких observer-ов */
     window.addEventListener('resize', resizeChart);
     window.addEventListener('orientationchange', resizeChart);
-
-    resizeChart(); // первый раз
-
+    resizeChart();
     return () => {
       window.removeEventListener('resize', resizeChart);
       window.removeEventListener('orientationchange', resizeChart);
@@ -116,7 +106,7 @@ export default function Chart({ candles, positions = [] }) {
       fitDone.current  = true;
       prevLen.current  = data.length;
       prevFirst.current = first;
-      resizeChart(); // подгоняем один раз
+      resizeChart();
     } else {
       const diff = data.length - prevLen.current;
       if (diff > 0) {
@@ -126,7 +116,6 @@ export default function Chart({ candles, positions = [] }) {
       }
       prevLen.current = data.length;
     }
-
     if (userAtEnd.current) chart.timeScale().scrollToRealTime();
   }, [candles]);
 
@@ -134,11 +123,14 @@ export default function Chart({ candles, positions = [] }) {
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
+
+    // Очистка прежних линий
     priceLines.current.forEach(l => { try { series.removePriceLine(l); } catch {} });
     priceLines.current = [];
 
     positions.forEach(p => {
       if (!p.visible) return;
+
       const add = (price, color, title) => {
         if (price == null) return;
         priceLines.current.push(
@@ -152,9 +144,24 @@ export default function Chart({ candles, positions = [] }) {
           }),
         );
       };
+
+      // Лейбл входа — без изменений
       add(p.entryPx, p.colors.entry, `${p.key} ${p.qty ?? ''}`.trim());
-      add(p.sl,      p.colors.sl,    `${p.key} SL`);
-      add(p.tp,      p.colors.tp,    `${p.key} TP`);
+
+      // Только для Call меняем ТОЛЬКО подписи и цвета:
+      //   верхняя линия (tp) -> SL (красная)
+      //   нижняя линия (sl) -> TP (зелёная)
+      const isCall = String(p.optType || '').toUpperCase() === 'C';
+
+      // Нижняя линия (слой SL по расчёту): для Call рисуем как TP зелёным
+      const slTitle = isCall ? `${p.key} TP` : `${p.key} SL`;
+      const slColor = isCall ? p.colors.tp  : p.colors.sl;
+      add(p.sl, slColor, slTitle);
+
+      // Верхняя линия (слой TP по расчёту): для Call рисуем как SL красным
+      const tpTitle = isCall ? `${p.key} SL` : `${p.key} TP`;
+      const tpColor = isCall ? p.colors.sl  : p.colors.tp;
+      add(p.tp, tpColor, tpTitle);
     });
   }, [positions]);
 
@@ -162,14 +169,12 @@ export default function Chart({ candles, positions = [] }) {
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
-
     series.setMarkers([]);
     markersRef.current = [];
     if (candles.length === 0) return;
 
     const times = candles.map(c => c.time);
     const markers = [];
-
     positions.forEach(p => {
       if (!p.visible || !p.openTime) return;
       let closest = times[0], min = Math.abs(p.openTime - times[0]);
@@ -185,7 +190,6 @@ export default function Chart({ candles, positions = [] }) {
         text: '',
       });
     });
-
     if (markers.length) series.setMarkers(markers);
     markersRef.current = markers;
   }, [positions, candles]);

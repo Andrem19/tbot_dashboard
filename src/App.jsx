@@ -17,6 +17,15 @@ function toUnixSeconds(str) {
   return Math.floor(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s, ms) / 1000);
 }
 
+/** Определение типа опциона по имени: берём 6-й символ с конца (C или P). */
+function getOptionTypeFromName(name) {
+  if (!name || typeof name !== 'string') return null;
+  const idx = name.length - 6; // …-C-USDT  -> 'C' находится за 6 позиций до конца
+  if (idx < 0) return null;
+  const ch = String(name[idx]).toUpperCase();
+  return ch === 'C' || ch === 'P' ? ch : null;
+}
+
 /* === НАСТРОЙКИ ПО УМОЛЧАНИЮ ================================================ */
 const DEFAULT_SETTINGS = { coin: 'ETHUSDT', number_candles: 48, interv: 60 };
 const ALLOWED_MINUTES = [
@@ -126,11 +135,15 @@ export default function App() {
     const res = {}, st = dashboard?.stages || {};
     for (const [k, obj] of Object.entries(st)) {
       if (!obj?.exist || !obj.position?.exist) continue;
-      const entry  = obj.position.position_info?.entryPx ?? null;
-      const lower  = obj.lower_perc ?? null;
-      const upper  = obj.upper_perc ?? null;
+      const entry   = obj.position.position_info?.entryPx ?? null;
+      const lower   = obj.lower_perc ?? null;
+      const upper   = obj.upper_perc ?? null;
       const openUts = toUnixSeconds(obj.position.open_time);
       const h2e     = obj.position.leg?.hours_to_exp ?? null;
+
+      // Имя и тип опциона по правилу «6-й символ с конца»
+      const optionName = obj.position.leg?.name || '';
+      const optType    = getOptionTypeFromName(optionName); // 'C' | 'P' | null
 
       let elapsed = 0, total = 0, percent = 0;
       if (openUts && h2e != null) {
@@ -147,8 +160,10 @@ export default function App() {
         qty      : obj.position.position_info?.size ?? null,
         futPnl   : obj.position.position_info?.unrealizedPnl ?? null,
         optPnl   : obj.position.leg?.info?.unrealisedPnl ?? null,
+
+        // Передаём краткую инфу об опционе (как было)…
         optionInfo: {
-          name          : obj.position.leg?.name,
+          name          : optionName,
           contracts     : obj.position.leg?.contracts,
           unrealisedPnl : obj.position.leg?.info?.unrealisedPnl,
           avgPrice      : obj.position.leg?.info?.avgPrice,
@@ -156,6 +171,10 @@ export default function App() {
           usedBid       : obj.position.leg?.info?.used_bid,
           maxSize       : obj.position.leg?.info?.max_size,
         },
+
+        // …и добавляем тип опциона для корректной отрисовки названий/цветов линий
+        optType,
+
         colors   : STAGE_COLORS[k] || {},
         progress : { elapsed, remaining: h2e, percent },
         openTime : openUts,
@@ -167,7 +186,6 @@ export default function App() {
   /* ---------- simulation positions ---------- */
   const [simUpdatedAt, setSimUpdatedAt] = useState(null);
   const prevSimJsonRef = useRef(null);
-
   const simulationPositions = useMemo(() => {
     const sim = dashboard?.stages?.simulation;
     if (!sim) return null;
