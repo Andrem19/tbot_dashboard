@@ -50,7 +50,7 @@ const STAGE_COLORS = {
   second: { entry: '#ffffffff', sl: '#c0392b', tp: '#27ae60' },
 };
 
-/* ─── таблица опционов (как была) ─────────────────────────── */
+/* ─── таблица опционов (как была, с окраской имени) ───────────────────────── */
 function OptionTable({ stages }) {
   const order = ['first', 'second'];
   const rows  = [
@@ -83,6 +83,20 @@ function OptionTable({ stages }) {
               {order.map((k) => {
                 const inf = stages[k]?.optionInfo;
                 const val = inf?.[key];
+
+                // Специальная окраска ТОЛЬКО для поля Name по типу опциона
+                if (key === 'name' && typeof val === 'string') {
+                  const t = getOptionTypeFromName(val); // 'C' | 'P' | null
+                  const color =
+                    t === 'C' ? '#e74c3c' :
+                    t === 'P' ? '#2ecc71' : undefined;
+                  return (
+                    <td key={k + key}>
+                      <span style={{ color }}>{val}</span>
+                    </td>
+                  );
+                }
+
                 return (
                   <td key={k + key}>{val == null ? '-' : fmt ? fmt(val, inf) : val}</td>
                 );
@@ -161,7 +175,6 @@ export default function App() {
         futPnl   : obj.position.position_info?.unrealizedPnl ?? null,
         optPnl   : obj.position.leg?.info?.unrealisedPnl ?? null,
 
-        // Передаём краткую инфу об опционе (как было)…
         optionInfo: {
           name          : optionName,
           contracts     : obj.position.leg?.contracts,
@@ -172,7 +185,7 @@ export default function App() {
           maxSize       : obj.position.leg?.info?.max_size,
         },
 
-        // …и добавляем тип опциона для корректной отрисовки названий/цветов линий
+        // добавляем тип (используется в Chart и для окраски Name)
         optType,
 
         colors   : STAGE_COLORS[k] || {},

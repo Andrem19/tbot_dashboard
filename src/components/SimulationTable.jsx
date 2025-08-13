@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import ValueFlash from './ValueFlash.jsx';
 
+/** Определяем тип опциона по имени: 6-й символ с конца (C или P). */
+function getOptionTypeFromName(name) {
+  if (!name || typeof name !== 'string') return null;
+  const idx = name.length - 6;
+  if (idx < 0) return null;
+  const ch = String(name[idx]).toUpperCase();
+  return ch === 'C' || ch === 'P' ? ch : null;
+}
+
 /**
  * Панель simulation с таймером последнего обновления,
  * анимированным PnL (ValueFlash) и компактными метаданными.
@@ -29,25 +38,29 @@ export default function SimulationTable({ positions = null, updatedAt = null, si
   /* строки-метрики (PnL – первый, flash = true) */
   const rows = [
     { label: 'PnL', key: 'pnl', fmt: (v) => v.toFixed(2), flash: true },
-
-    { label: 'Symbol',       key: 'symbol' },
+    {
+      label: 'Symbol',
+      key: 'symbol',
+      fmt: (v) => {
+        const t = getOptionTypeFromName(v);
+        const color =
+          t === 'C' ? '#e74c3c' :
+          t === 'P' ? '#2ecc71' : undefined;
+        return <span style={{ color }}>{v}</span>;
+      },
+    },
     { label: 'Ask',          key: 'ask',          fmt: (v) => v.toFixed(2) },
     { label: 'Ask original', key: 'askOriginal',  fmt: (v) => v.toFixed(2) },
     { label: 'Target bid',   key: 'bestTargBid',  fmt: (v) => v.toFixed(2) },
-
     { label: 'p_t',          key: 'pt',           fmt: (v) => v.toFixed(4) },
     { label: 'Qty',          key: 'qty',          fmt: (v) => v.toFixed(6) },
-
     { label: 'IV',           key: 'iv',           fmt: (v) => v.toFixed(4) },
     { label: 'q_frac',       key: 'qFrac',        fmt: (v) => v.toFixed(6) },
-
     { label: 'PnL lower',    key: 'pnlLower',     fmt: (v) => v.toFixed(2) },
     { label: 'PnL upper',    key: 'pnlUpper',     fmt: (v) => v.toFixed(2) },
-
     { label: 'Strike %',     key: 'strikePerc',   fmt: (v) => v.toFixed(4) },
     { label: 'Lower %',      key: 'lowerPerc',    fmt: (v) => v.toFixed(4) },
     { label: 'Upper %',      key: 'upperPerc',    fmt: (v) => v.toFixed(4) },
-
     { label: 'Max amount',   key: 'maxAmount' },
     {
       label: 'Ask indicators',
@@ -81,7 +94,6 @@ export default function SimulationTable({ positions = null, updatedAt = null, si
         <span>
           Last update:&nbsp;{secondsAgo == null ? '—' : `${secondsAgo}s ago`}
         </span>
-
         {simMeta && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', color: '#ddd' }}>
             {metaLabel('ATR(rel)', simMeta.relAtr, (v) => Number(v).toFixed(4))}
@@ -108,7 +120,6 @@ export default function SimulationTable({ positions = null, updatedAt = null, si
               <td>{label}</td>
               {order.map((k) => {
                 const val = positions[k]?.[key];
-
                 if (flash) {
                   return (
                     <td
@@ -126,7 +137,6 @@ export default function SimulationTable({ positions = null, updatedAt = null, si
                     </td>
                   );
                 }
-
                 return (
                   <td key={k + key}>
                     {val == null ? '-' : fmt ? fmt(val) : val}
