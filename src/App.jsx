@@ -27,7 +27,7 @@ function getOptionTypeFromName(name) {
 }
 
 /* === НАСТРОЙКИ ПО УМОЛЧАНИЮ ================================================ */
-const DEFAULT_SETTINGS = { coin: 'ETHUSDT', number_candles: 48, interv: 60 };
+const DEFAULT_SETTINGS = { coin: 'BTCUSDT', number_candles: 84, interv: 60 };
 const ALLOWED_MINUTES = [
   1, 3, 5, 15, 30, 60, 120, 240, 360, 480, 720, 1440, 4320, 10080, 43200,
 ];
