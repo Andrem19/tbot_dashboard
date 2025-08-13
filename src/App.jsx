@@ -237,6 +237,8 @@ export default function App() {
       periodAvgDist : sim.period_avg_dist ?? null,
       periodAvgPnl  : sim.period_avg_pnl ?? null,
       weNeed        : sim.we_need ?? null,
+      exp1          : dashboard?.stages?.first?.expect,
+      exp2          : dashboard?.stages?.second?.expect,
     };
   }, [dashboard]);
 
