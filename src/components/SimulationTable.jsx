@@ -97,7 +97,6 @@ export default function SimulationTable({ positions = null, updatedAt = null, si
         {simMeta && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', color: '#ddd' }}>
             {metaLabel('ATR(rel)', simMeta.relAtr, (v) => Number(v).toFixed(4))}
-            {metaLabel('Dist(avg)', simMeta.periodAvgDist, (v) => Number(v).toFixed(4))}
             {metaLabel('PnL(avg)', simMeta.periodAvgPnl, (v) => Number(v).toFixed(3))}
             {metaLabel('Exp_1', simMeta.exp1, (v) => Number(v).toFixed(2))}
             {metaLabel('Exp_2', simMeta.exp2, (v) => Number(v).toFixed(2))}

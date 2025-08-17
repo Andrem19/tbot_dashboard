@@ -234,7 +234,6 @@ export default function App() {
     if (!sim) return null;
     return {
       relAtr        : Array.isArray(sim.atr) ? sim.atr[1] : null,
-      periodAvgDist : sim.period_avg_dist ?? null,
       periodAvgPnl  : sim.period_avg_pnl ?? null,
       weNeed        : sim.we_need ?? null,
       exp1          : dashboard?.stages?.first?.expect,
