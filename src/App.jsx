@@ -236,6 +236,7 @@ export default function App() {
       relAtr        : Array.isArray(sim.atr) ? sim.atr[1] : null,
       periodAvgPnl  : sim.period_avg_pnl ?? null,
       weNeed        : sim.we_need ?? null,
+      RR25          : sim.RR25 ?? null,
       exp1          : dashboard?.stages?.first?.expect,
       exp2          : dashboard?.stages?.second?.expect,
     };
