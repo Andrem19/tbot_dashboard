@@ -4,7 +4,10 @@ import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
 /**
  * props:
  *   candles   – [{ time, open, high, low, close }]
- *   positions – [{ key, visible, entryPx, sl, tp, qty, colors, openTime, optType? }]
+ *   positions – [{
+ *       key, visible, entryPx, sl, tp, qty, colors, openTime, optType?,
+ *       secondStagePx?   // ←— НОВОЕ: уровень «второго этапа» (если != 0, рисуем)
+ *   }]
  */
 export default function Chart({ candles, positions = [] }) {
   const containerRef = useRef(null);
@@ -72,6 +75,7 @@ export default function Chart({ candles, positions = [] }) {
     window.addEventListener('resize', resizeChart);
     window.addEventListener('orientationchange', resizeChart);
     resizeChart();
+
     return () => {
       window.removeEventListener('resize', resizeChart);
       window.removeEventListener('orientationchange', resizeChart);
@@ -116,6 +120,7 @@ export default function Chart({ candles, positions = [] }) {
       }
       prevLen.current = data.length;
     }
+
     if (userAtEnd.current) chart.timeScale().scrollToRealTime();
   }, [candles]);
 
@@ -124,7 +129,7 @@ export default function Chart({ candles, positions = [] }) {
     const series = seriesRef.current;
     if (!series) return;
 
-    // Очистка прежних линий
+    // Сначала удаляем старые линии
     priceLines.current.forEach(l => { try { series.removePriceLine(l); } catch {} });
     priceLines.current = [];
 
@@ -145,23 +150,24 @@ export default function Chart({ candles, positions = [] }) {
         );
       };
 
-      // Лейбл входа — без изменений
-      add(p.entryPx, p.colors.entry, `${p.key} ${p.qty ?? ''}`.trim());
+      // Базовые линии
+      add(p.entryPx, p.colors?.entry, `${p.key} ${p.qty ?? ''}`.trim());
 
-      // Только для Call меняем ТОЛЬКО подписи и цвета:
-      //   верхняя линия (tp) -> SL (красная)
-      //   нижняя линия (sl) -> TP (зелёная)
       const isCall = String(p.optType || '').toUpperCase() === 'C';
-
-      // Нижняя линия (слой SL по расчёту): для Call рисуем как TP зелёным
       const slTitle = isCall ? `${p.key} TP` : `${p.key} SL`;
-      const slColor = isCall ? p.colors.tp  : p.colors.sl;
+      const slColor = isCall ? p.colors?.tp  : p.colors?.sl;
       add(p.sl, slColor, slTitle);
 
-      // Верхняя линия (слой TP по расчёту): для Call рисуем как SL красным
       const tpTitle = isCall ? `${p.key} SL` : `${p.key} TP`;
-      const tpColor = isCall ? p.colors.sl  : p.colors.tp;
+      const tpColor = isCall ? p.colors?.sl  : p.colors?.tp;
       add(p.tp, tpColor, tpTitle);
+
+      // ←— НОВОЕ: линия «второго этапа», только если значение существует и != 0
+      const s2 = Number(p.secondStagePx);
+      if (Number.isFinite(s2) && s2 !== 0) {
+        const s2Color = p.colors?.secondStage || '#FFD700';
+        add(s2, s2Color, `${p.key} S2`);
+      }
     });
   }, [positions]);
 
@@ -169,12 +175,14 @@ export default function Chart({ candles, positions = [] }) {
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
+
     series.setMarkers([]);
     markersRef.current = [];
     if (candles.length === 0) return;
 
     const times = candles.map(c => c.time);
     const markers = [];
+
     positions.forEach(p => {
       if (!p.visible || !p.openTime) return;
       let closest = times[0], min = Math.abs(p.openTime - times[0]);
@@ -185,11 +193,12 @@ export default function Chart({ candles, positions = [] }) {
       markers.push({
         time: closest,
         position: 'aboveBar',
-        color: p.colors.entry,
+        color: p.colors?.entry,
         shape: 'arrowDown',
         text: '',
       });
     });
+
     if (markers.length) series.setMarkers(markers);
     markersRef.current = markers;
   }, [positions, candles]);

@@ -16,7 +16,6 @@ function toUnixSeconds(str) {
   const ms = Number(msRaw.slice(0, 3));
   return Math.floor(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s, ms) / 1000);
 }
-
 /** Определение типа опциона по имени: берём 6-й символ с конца (C или P). */
 function getOptionTypeFromName(name) {
   if (!name || typeof name !== 'string') return null;
@@ -45,9 +44,10 @@ function normalizeInterv(v) {
 }
 
 /* ─── цвета линий ─────────────────────────────────────────── */
+/* Добавлены цвета для secondStage: first — жёлтый, second — оранжевый */
 const STAGE_COLORS = {
-  first : { entry: '#5e6288ff', sl: '#e74c3c', tp: '#2ecc71' },
-  second: { entry: '#ffffffff', sl: '#c0392b', tp: '#27ae60' },
+  first : { entry: '#5e6288ff', sl: '#e74c3c', tp: '#2ecc71', secondStage: '#FFD700' },
+  second: { entry: '#ffffffff', sl: '#c0392b', tp: '#27ae60', secondStage: '#FFA500' },
 };
 
 /* ─── таблица опционов (как была, с окраской имени) ───────────────────────── */
@@ -83,8 +83,6 @@ function OptionTable({ stages }) {
               {order.map((k) => {
                 const inf = stages[k]?.optionInfo;
                 const val = inf?.[key];
-
-                // Специальная окраска ТОЛЬКО для поля Name по типу опциона
                 if (key === 'name' && typeof val === 'string') {
                   const t = getOptionTypeFromName(val); // 'C' | 'P' | null
                   const color =
@@ -96,7 +94,6 @@ function OptionTable({ stages }) {
                     </td>
                   );
                 }
-
                 return (
                   <td key={k + key}>{val == null ? '-' : fmt ? fmt(val, inf) : val}</td>
                 );
@@ -154,10 +151,14 @@ export default function App() {
       const upper   = obj.upper_perc ?? null;
       const openUts = toUnixSeconds(obj.position.open_time);
       const h2e     = obj.position.leg?.hours_to_exp ?? null;
-
-      // Имя и тип опциона по правилу «6-й символ с конца»
       const optionName = obj.position.leg?.name || '';
       const optType    = getOptionTypeFromName(optionName); // 'C' | 'P' | null
+
+      // ←— НОВОЕ: читаем second_stage_px (если есть)
+      const secondStagePxRaw = obj.position?.second_stage_px;
+      const secondStagePx = Number.isFinite(Number(secondStagePxRaw))
+        ? Number(secondStagePxRaw)
+        : null;
 
       let elapsed = 0, total = 0, percent = 0;
       if (openUts && h2e != null) {
@@ -165,7 +166,6 @@ export default function App() {
         total   = elapsed + Number(h2e);
         percent = total > 0 ? Math.min(100, Math.max(0, (elapsed / total) * 100)) : 0;
       }
-
       res[k] = {
         baseCoin : (obj.base_coin || 'SOL').toUpperCase(),
         entryPx  : entry,
@@ -174,7 +174,6 @@ export default function App() {
         qty      : obj.position.position_info?.size ?? null,
         futPnl   : obj.position.position_info?.unrealizedPnl ?? null,
         optPnl   : obj.position.leg?.info?.unrealisedPnl ?? null,
-
         optionInfo: {
           name          : optionName,
           contracts     : obj.position.leg?.contracts,
@@ -184,13 +183,12 @@ export default function App() {
           usedBid       : obj.position.leg?.info?.used_bid,
           maxSize       : obj.position.leg?.info?.max_size,
         },
-
-        // добавляем тип (используется в Chart и для окраски Name)
         optType,
-
         colors   : STAGE_COLORS[k] || {},
         progress : { elapsed, remaining: h2e, percent },
         openTime : openUts,
+        // ←— НОВОЕ: прокидываем в график
+        secondStagePx,
       };
     }
     return res;
