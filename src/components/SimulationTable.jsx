@@ -101,6 +101,8 @@ export default function SimulationTable({ positions = null, updatedAt = null, si
             {metaLabel('Exp_1', simMeta.exp1, (v) => Number(v).toFixed(2))}
             {metaLabel('Exp_2', simMeta.exp2, (v) => Number(v).toFixed(2))}
             {metaLabel('RR25', simMeta.RR25, (v) => Number(v).toFixed(4))}
+            {metaLabel('Stab_score', simMeta.stab_score, (v) => Number(v).toFixed(4))}
+            {metaLabel('Stab_conf', simMeta.stab_conf, (v) => Number(v).toFixed(4))}
             {metaLabel('Need', simMeta.weNeed)}
           </div>
         )}

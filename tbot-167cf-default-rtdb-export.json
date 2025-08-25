@@ -4,48 +4,45 @@
     "stages": {
       "first": {
         "amount": 1,
-        "base_coin": "BTC",
-        "exist": true,
+        "base_coin": "SOL",
+        "exist": false,
         "expect": 2.4,
-        "lower_perc": 0.018012641995097556,
-        "over_strike": 0.016012641995097547,
+        "lower_perc": 0.03,
+        "over_strike": 0.2,
         "position": {
-          "exist": true,
+          "exist": false,
+          "fut_full_amt": 0.0053,
           "leg": {
-            "contracts": 0.01,
-            "deliveryTime": 1755763200000,
-            "exist": true,
-            "hours_to_exp": 19.478095116944445,
+            "contracts": 0,
+            "deliveryTime": 0,
+            "exist": false,
+            "hours_to_exp": 0,
             "info": {
-              "avgPrice": 680,
-              "curRealisedPnl": -0.34043625,
-              "markPrice": 840.86410904,
-              "max_size": 2.12,
-              "positionValue": 8.40864109,
-              "side": "Buy",
-              "size": 0.01,
-              "symbol": "BTC-21AUG25-113500-C-USDT",
-              "unrealisedPnl": 1.5,
-              "used_bid": 830
+              "avgPrice": 0,
+              "curRealisedPnl": 0,
+              "markPrice": 0,
+              "positionValue": 0,
+              "size": 0,
+              "unrealisedPnl": 0,
+              "used_bid": 0
             },
-            "name": "BTC-21AUG25-113500-C-USDT",
-            "tp_id": "h-TP-4d0320dd47dc4f65a6"
+            "name": ""
           },
-          "open_time": "2025-08-20 11:25:01.859000+00:00",
-          "pnl_target": 3.837957218309765,
+          "open_time": "",
+          "pnl_target": 0,
           "position_info": {
-            "entryPx": 113432,
-            "positionValue": 435.64335,
-            "side": 2,
-            "size": -0.00383,
-            "unrealizedPnl": -1.39412
+            "entryPx": 0,
+            "positionValue": 0,
+            "side": 0,
+            "size": 0,
+            "unrealizedPnl": 0
           },
-          "second_stage_px": 113977.75906480175
+          "second_stage_px": 113.44
         },
-        "rel_atr": 0.004499,
-        "rsi": 43.61,
-        "to_exp_init": 20.584292843055554,
-        "upper_perc": 0.016037774901901513
+        "rel_atr": 0.08,
+        "rsi": 55.4,
+        "to_exp_init": 0,
+        "upper_perc": 0.02
       },
       "second": {
         "amount": 2,
@@ -56,6 +53,7 @@
         "over_strike": 0.2,
         "position": {
           "exist": false,
+          "fut_full_amt": 0.0053,
           "leg": {
             "contracts": 0,
             "deliveryTime": 0,
@@ -89,90 +87,68 @@
         "upper_perc": 0.02
       },
       "simulation": {
-        "RR25": -0.046392099330930026,
+        "RR25": -0.077060090650308,
         "atr": [
-          526,
-          0.004622
+          656,
+          0.005896
         ],
         "fut_perc_c": 0.8,
         "fut_perc_p": 0.8,
-        "last_px": 113758.22,
+        "last_px": 111226.51,
         "period_avg_dist": 0,
-        "period_avg_pnl": 2.260625,
+        "period_avg_pnl": 1.7591666666666668,
         "position_1": {
-          "ask": 5.6000000000000005,
+          "ask": 7.5,
           "ask_indicators": [
-            15.096423,
-            1.98
+            18.930844,
+            1.85
           ],
-          "ask_original": 560,
-          "best_targ_bid": 1661.8385570837827,
-          "iv": 0.3025,
-          "lower_perc": 0.017267236472660517,
-          "max_amount": 2.06,
+          "ask_original": 750,
+          "best_targ_bid": 2099.2864379022258,
+          "iv": 0.3921,
+          "lower_perc": 0.019368310355333356,
+          "max_amount": 1.2,
           "name": "BTC",
-          "p_t": 0.015267236472660463,
-          "pnl": 2.36,
-          "pnl_lower": 4.361916353329799,
-          "pnl_upper": 1.0904790883324509,
-          "q_frac": 0.014267236472660462,
-          "qty": 0.005070429175209873,
-          "strike_perc": 0.0019118610139290733,
-          "symbol": "BTC-21AUG25-114000-C-USDT",
+          "p_t": 0.019368310355333367,
+          "pnl": 0.62,
+          "pnl_lower": 3.7477056381913627,
+          "pnl_upper": 0.9369264095478407,
+          "q_frac": 0.019368310355333367,
+          "qty": 0.005219826250958672,
+          "strike_perc": 0.002209945396479117,
+          "symbol": "BTC-26AUG25-111500-C-USDT",
           "type": "call",
-          "upper_perc": 0.01720828632079203
+          "upper_perc": 0.021621058660119707
         },
         "position_2": {
-          "ask": 5.4,
+          "ask": 0.735,
           "ask_indicators": [
-            12.910062,
-            2.04
+            98,
+            1
           ],
-          "ask_original": 540,
-          "best_targ_bid": 1662.218884534312,
-          "iv": 0.3025,
-          "lower_perc": 0.017270802042509154,
-          "max_amount": 14.67,
-          "name": "BTC",
-          "p_t": 0.015270802042509177,
-          "pnl": 2.33,
-          "pnl_lower": 4.496516297710562,
-          "pnl_upper": 1.1241290744276409,
-          "q_frac": 0.014270802042509176,
-          "qty": 0.005038135003465652,
-          "strike_perc": 0.00231634898029401,
-          "symbol": "BTC-21AUG25-114000-C-USDT",
-          "type": "call",
-          "upper_perc": 0.017622523529542643
+          "ask_original": 14.7,
+          "best_targ_bid": 0,
+          "iv": 0.2,
+          "lower_perc": 0.0592,
+          "max_amount": 14.6,
+          "name": "ETH",
+          "p_t": 0.04,
+          "pnl": 0,
+          "pnl_upper": 0,
+          "q_frac": 0.1,
+          "qty": 0,
+          "strike_perc": 0.02,
+          "symbol": "ETH-6AUG25-3550-P-USDT",
+          "type": "Put",
+          "upper_perc": 0.03
         },
-        "position_3": {
-          "ask": 5.15,
-          "ask_indicators": [
-            12.175205,
-            2.02
-          ],
-          "ask_original": 515,
-          "best_targ_bid": 1654.547324559724,
-          "iv": 0.3009,
-          "lower_perc": 0.017198881167747322,
-          "max_amount": 1.05,
-          "name": "BTC",
-          "p_t": 0.015198881167747414,
-          "pnl": 2.56,
-          "pnl_lower": 4.733677959845524,
-          "pnl_upper": 1.1834194899613806,
-          "q_frac": 0.014198881167747413,
-          "qty": 0.0050537316924330255,
-          "strike_perc": 0.0025329189280829277,
-          "symbol": "BTC-21AUG25-114000-C-USDT",
-          "type": "call",
-          "upper_perc": 0.01777029762962592
-        },
-        "rsi": 47.69,
-        "time_to_exp": 19.486465244999998,
-        "we_need": "nothing"
+        "rsi": 29.1,
+        "stable_conf": 0.5695488721804651,
+        "stable_score": -0.30375939849624267,
+        "time_to_exp": 21.37439804111111,
+        "we_need": "first"
       }
     },
-    "time": "2025-08-20 12:31:18.857666"
+    "time": "2025-08-25 10:37:48.487173"
   }
 }

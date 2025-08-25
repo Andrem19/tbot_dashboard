@@ -235,6 +235,8 @@ export default function App() {
       periodAvgPnl  : sim.period_avg_pnl ?? null,
       weNeed        : sim.we_need ?? null,
       RR25          : sim.RR25 ?? null,
+      stab_score    : sim.stable_score ?? null,
+      stab_conf     : sim.stable_conf ?? null,
       exp1          : dashboard?.stages?.first?.expect,
       exp2          : dashboard?.stages?.second?.expect,
     };
