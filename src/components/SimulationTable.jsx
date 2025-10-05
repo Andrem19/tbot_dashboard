@@ -66,7 +66,7 @@ export default function SimulationTable({ positions = null, updatedAt = null, si
       label: 'Ask indicators',
       key: 'askIndicators',
       fmt: (v) =>
-        Array.isArray(v) ? v.map((n) => n.toFixed(2)).join(' / ') : '-',
+        Array.isArray(v) ? v.map((n) => n.toFixed(3)).join(' / ') : '-',
     },
   ];
 
