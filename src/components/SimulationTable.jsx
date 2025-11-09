@@ -79,7 +79,7 @@ export default function SimulationTable({ positions = null, updatedAt = null, si
 
   return (
     <div className="option-table-wrapper">
-      {/* --- таймер и метрики в одну строку --- */}
+      {/* -- таймер и метрики в одну строку -- */}
       <div
         style={{
           fontSize: 12,
