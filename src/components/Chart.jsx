@@ -4,23 +4,18 @@ import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
 /**
  * props:
  * candles  – [{ time, open, high, low, close }]
- * positions – массив объектов. Для новой БД ожидаем объект вида:
- * {
- * entryPx: number, // pos.open_price
- * sl: number,      // pos.sl_price
- * tp: number,      // pos.tp_price
- * openTime: number,// pos.timestamp_open
- * label: string,   // 'Long' / 'Short'
- * visible: boolean
- * }
+ * positions – Активная позиция (массив)
+ * history   – История сделок (массив из dashb.hist)
  */
-export default function Chart({ candles, positions = [] }) {
+export default function Chart({ candles, positions = [], history = [] }) {
   const containerRef = useRef(null);
   const chartRef     = useRef(null);
   const seriesRef    = useRef(null);
   const prevLen      = useRef(0);
   const fitDone      = useRef(false);
   const userAtEnd    = useRef(true);
+  
+  // Храним ссылки на созданные линии, чтобы удалять их при обновлении
   const priceLines   = useRef([]);
   const markersRef   = useRef([]);
 
@@ -43,7 +38,6 @@ export default function Chart({ candles, positions = [] }) {
     const el = containerRef.current;
     if (!el) return;
     
-    // Стили контейнера
     el.style.width  = '100%';
     el.style.height = '100%';
 
@@ -71,7 +65,6 @@ export default function Chart({ candles, positions = [] }) {
 
     chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
       const sp = chart.timeScale().scrollPosition();
-      // Если скролл близко к 0 (правый край), считаем userAtEnd
       userAtEnd.current = sp === 0 || sp < 0.5; 
     });
 
@@ -101,14 +94,12 @@ export default function Chart({ candles, positions = [] }) {
       close: c.close,
     }));
 
-    // Логика первого рендера и обновлений
     if (!fitDone.current || data.length < prevLen.current) {
       series.setData(data);
       chart.timeScale().fitContent();
       fitDone.current = true;
       resizeChart();
     } else {
-      // Инкрементальное обновление
       const last = data[data.length - 1];
       series.update(last);
     }
@@ -120,44 +111,60 @@ export default function Chart({ candles, positions = [] }) {
     }
   }, [candles]);
 
-  // --- Отрисовка линий (SL, TP, Entry) ---
+  // --- Отрисовка линий (Активные позиции + История) ---
   useEffect(() => {
     const series = seriesRef.current;
-    if (!series) return;
+    if (!series || candles.length === 0) return;
 
-    // Удаляем старые линии
+    // 1. Очистка старых линий
     priceLines.current.forEach(l => { try { series.removePriceLine(l); } catch {} });
     priceLines.current = [];
 
+    const addLine = (price, color, title, style = LineStyle.Dashed) => {
+      if (!Number.isFinite(price)) return;
+      const line = series.createPriceLine({
+        price,
+        color,
+        lineWidth: 1, // Тонкие линии
+        lineStyle: style,
+        axisLabelVisible: true,
+        title: title || '',
+      });
+      priceLines.current.push(line);
+    };
+
+    // Время первой загруженной свечи
+    const firstCandleTime = candles[0].time;
+
+    // 2. Рендер АКТИВНЫХ позиций
     positions.forEach(p => {
       if (!p.visible) return;
-
-      const addLine = (price, color, title) => {
-        if (!Number.isFinite(price)) return;
-        const line = series.createPriceLine({
-          price,
-          color,
-          lineWidth: 2,
-          lineStyle: LineStyle.Dashed,
-          axisLabelVisible: true,
-          title: title || '',
-        });
-        priceLines.current.push(line);
-      };
-
-      // Entry Price (Белый/Синий)
-      addLine(p.entryPx, '#3a7afe', `Entry`);
-
-      // SL (Красный)
+      // Жирнее для активной
+      addLine(p.entryPx, '#3a7afe', `Entry`, LineStyle.Solid); 
       addLine(p.sl, '#e74c3c', `SL`);
-
-      // TP (Зеленый)
       addLine(p.tp, '#2ecc71', `TP`);
     });
 
-  }, [positions]);
+    // 3. Рендер ИСТОРИИ (dashb.hist)
+    // Рисуем только если open_time >= времени первой свечи на графике
+    if (history && history.length > 0) {
+      history.forEach(h => {
+        // Если сделка началась раньше, чем у нас есть данные свечей — пропускаем полностью
+        if (h.timestamp_open < firstCandleTime) return;
 
-  // --- Маркеры входа ---
+        // Entry (История) - Серый цвет
+        addLine(h.open_price, '#888888', 'Hist Entry', LineStyle.Dotted);
+
+        // Close (История) - Фиолетовый + Профит
+        // Форматируем профит
+        const profitStr = h.profit > 0 ? `+${h.profit.toFixed(2)}` : `${h.profit.toFixed(2)}`;
+        addLine(h.close_price, '#9b59b6', `Close (${profitStr})`, LineStyle.Dotted);
+      });
+    }
+
+  }, [positions, candles, history]); // Перерисовываем при изменении истории или свечей
+
+  // --- Маркеры входа (только для активной позиции) ---
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
@@ -172,13 +179,9 @@ export default function Chart({ candles, positions = [] }) {
 
     positions.forEach(p => {
       if (!p.openTime) return;
-
-      // Ищем ближайшую свечу к времени открытия
-      // Время в базе в секундах (timestamp_open) или мс?
-      // В JSON примере timestamp_open: 1766597096.643 (float sec). 
-      // Приводим к int секундам
       const openTs = Math.floor(p.openTime);
-
+      
+      // Ищем ближайшую свечу
       let closest = candleTimes[0];
       let minDiff = Math.abs(openTs - closest);
 
@@ -190,12 +193,10 @@ export default function Chart({ candles, positions = [] }) {
         }
       }
       
-      // Если разница слишком большая (например > 2 интервалов), можно не рисовать,
-      // но для надежности рисуем на ближайшей найденной.
       markers.push({
         time: closest,
         position: 'aboveBar',
-        color: '#f1c40f', // Желтая стрелка
+        color: '#f1c40f',
         shape: 'arrowDown',
         text: 'Entry',
         size: 1,

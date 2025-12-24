@@ -4,7 +4,7 @@ import Chart from './Chart.jsx';
 import { useBinanceKlines } from '../hooks';
 
 /* ── График + WebSocket ───────────────────────────────────── */
-function ChartWithData({ symbol, number_candles, interv, positions, reportStatus }) {
+function ChartWithData({ symbol, number_candles, interv, positions, history, reportStatus }) {
   const {
     candles,
     loading,
@@ -24,9 +24,10 @@ function ChartWithData({ symbol, number_candles, interv, positions, reportStatus
 
   return (
     <div className="chart-wrapper">
-      {loading && <div style={{ padding: 8 }}>Loading…</div>}
-      {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
-      {candles.length > 0 && <Chart candles={candles} positions={positions} />}
+      {/* ...loading logic... */}
+      {candles.length > 0 && (
+         <Chart candles={candles} positions={positions} history={history} />
+      )}
     </div>
   );
 }
@@ -37,6 +38,7 @@ export default function ChartTabs({
   number_candles,
   interv,
   positionsByCoin = {},
+  history = [], // <--- Добавляем проп
   onStatusChange,
 }) {
   /* активную вкладку храним отдельно и СИНХРОНИЗИРУЕМ с coins  */
@@ -109,6 +111,7 @@ export default function ChartTabs({
               number_candles={number_candles}
               interv={interv}
               positions={positionsByCoin[c] || []}
+              history={history} // <--- Передаем дальше
               reportStatus={handleReport}
             />
           </div>

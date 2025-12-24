@@ -77,11 +77,11 @@ export default function HistoryHeatmap({ history = [] }) {
         const data = historyMap[key];
         
         cells.push({
-          dateStr: key,
-          hasData: !!data,
-          signal: data?.signal,
-          profit: data?.profit,
-          color: data ? getColor(data.profit, minP, maxP) : '#222', // #222 серый для пустых дней
+            dateStr: key,
+            hasData: !!data,
+            side: data?.side,     // <--- СТАЛО
+            profit: data?.profit,
+            color: data ? getColor(data.profit, minP, maxP) : '#222',
         });
       }
       // Следующий день
@@ -105,10 +105,10 @@ export default function HistoryHeatmap({ history = [] }) {
             title={`${cell.dateStr} | Profit: ${cell.profit ?? '-'}`}
           >
             {cell.hasData && (
-              <>
-                <div className="hm-signal">{cell.signal}</div>
-                <div className="hm-profit">{cell.profit?.toFixed(2)}</div>
-              </>
+                <>
+                    <div className="hm-signal">{cell.side}</div>   {/* <--- СТАЛО */}
+                    <div className="hm-profit">{cell.profit?.toFixed(2)}</div>
+                </>
             )}
           </div>
         ))}

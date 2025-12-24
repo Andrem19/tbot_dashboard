@@ -302,11 +302,12 @@ a { color: #61dafb; }
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  padding: 8px 14px;
+  padding: 4px 10px; /* Меньше отступы */
   background: #1a1a1a;
   border-bottom: 1px solid var(--border);
-  font-size: 12px;
+  font-size: 10px;   /* Очень мелкий шрифт */
   font-family: monospace;
+  justify-content: center; /* Центрируем, чтобы красивее смотрелось под графиком */
 }
 .report-item {
   display: flex;

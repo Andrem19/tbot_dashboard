@@ -92,7 +92,6 @@ export default function App() {
         <label>Interval (m) <input type="number" name="interv" value={form.interv} onChange={onChange} /></label>
         <button type="submit">Load</button>
         
-        {/* Отображаем текущий PnL прямо в хедере, если есть позиция */}
         {currentPnl != null && (
            <div className="header-pnl" style={{ marginLeft: 'auto', color: currentPnl >= 0 ? '#2ecc71' : '#e74c3c' }}>
              Active PnL: {currentPnl.toFixed(4)}
@@ -100,24 +99,26 @@ export default function App() {
         )}
       </form>
 
-      {/* Компактный отчет (Report) */}
-      <ReportStrip report={reportData} />
+      {/* --- УБРАЛИ ReportStrip ОТСЮДА --- */}
 
       <div className="main-content">
-        {/* Основной график */}
         <ChartTabs
-          coins={[settings.coin]} // Или Object.keys(positionsByCoin) если хотим авто-вкладки
+          coins={[settings.coin]}
           number_candles={settings.number_candles}
           interv={settings.interv}
           positionsByCoin={positionsByCoin}
+          history={historyData} // <--- ПЕРЕДАЛИ ИСТОРИЮ
           onStatusChange={setChartStatus}
         />
       </div>
 
-      {/* Тепловая карта (Hist) под графиком */}
+      {/* --- ПОСТАВИЛИ ReportStrip СЮДА --- */}
+      <ReportStrip report={reportData} />
+
+      {/* Тепловая карта */}
       <HistoryHeatmap history={historyData} />
 
-      {/* Статус бар (подвал) */}
+      {/* Статус бар */}
       <div className="status-bar">
         <span>WS: {chartStatus.wsConnected ? 'Connected' : 'Disconnected'}</span>
         <span>DB: {dbConnected ? 'Connected' : 'Disc.'}</span>
