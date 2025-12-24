@@ -1,0 +1,1585 @@
+===== КАРТА СТРУКТУРЫ ПРОЕКТА =====
+
+src/
+    App.jsx
+    index.css
+    firebase.js
+    App.css
+    main.jsx
+assets/
+    react.svg
+utils/
+    intervals.js
+components/
+    SimulationTable.jsx
+    ValueFlash.jsx
+    StatsPanel.jsx
+    Chart.jsx
+    ChartTabs.jsx
+services/
+    binance.js
+hooks/
+    useBinanceKlines.js
+    index.js
+    useFirebaseData.js
+
+===== КОД ФАЙЛОВ =====
+
+./src/App.jsx:
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ChartTabs       from './components/ChartTabs.jsx';
+import StatsPanel      from './components/StatsPanel.jsx';
+import SimulationTable from './components/SimulationTable.jsx';
+import { useFirebaseData } from './hooks';
+import './App.css';
+/* ─── утилиты ─────────────────────────────────────────────── */
+function toUnixSeconds(str) {
+  if (!str || typeof str !== 'string') return null;
+  const m = str.match(
+    /^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3,6}))?/
+  );
+  if (!m) return null;
+  const [, y, mo, d, h, mi, s, msRaw = '000'] = m;
+  const ms = Number(msRaw.slice(0, 3));
+  return Math.floor(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s, ms) / 1000);
+}
+/** Определение типа опциона по имени: берём 6-й символ с конца (C или P). */
+function getOptionTypeFromName(name) {
+  if (!name || typeof name !== 'string') return null;
+  const idx = name.length - 6; // …-C-USDT  -> 'C' находится за 6 позиций до конца
+  if (idx < 0) return null;
+  const ch = String(name[idx]).toUpperCase();
+  return ch === 'C' || ch === 'P' ? ch : null;
+}
+/* === НАСТРОЙКИ ПО УМОЛЧАНИЮ ================================================ */
+const DEFAULT_SETTINGS = { coin: 'BTCUSDT', number_candles: 84, interv: 60 };
+const ALLOWED_MINUTES = [
+  1, 3, 5, 15, 30, 60, 120, 240, 360, 480, 720, 1440, 4320, 10080, 43200,
+];
+function normalizeCoin(v)   { const s = (v || '').toString().trim().toUpperCase(); return s || DEFAULT_SETTINGS.coin; }
+function normalizeLimit(v)  { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.min(1500, Math.max(1, n)) : DEFAULT_SETTINGS.number_candles; }
+function normalizeInterv(v) {
+  const n = Math.floor(Number(v));
+  if (ALLOWED_MINUTES.includes(n)) return n;
+  let best = ALLOWED_MINUTES[0], diff = Math.abs(n - best);
+  for (const m of ALLOWED_MINUTES) {
+    const d = Math.abs(n - m);
+    if (d < diff) { best = m; diff = d; }
+  }
+  return best;
+}
+/* ─── цвета линий ─────────────────────────────────────────── */
+/* Добавлены цвета для secondStage: first — жёлтый, second — оранжевый */
+const STAGE_COLORS = {
+  first : { entry: '#5e6288ff', sl: '#e74c3c', tp: '#2ecc71', secondStage: '#FFD700' },
+  second: { entry: '#ffffffff', sl: '#c0392b', tp: '#27ae60', secondStage: '#FFA500' },
+};
+/* ─── таблица опционов (как была, с окраской имени) ───────────────────────── */
+function OptionTable({ stages }) {
+  const order = ['first', 'second'];
+  const rows  = [
+    { label: 'Name',          key: 'name' },
+    { label: 'Contracts',     key: 'contracts' },
+    { label: 'Unrealised PnL', key: 'unrealisedPnl', fmt: (v) => v.toFixed(2) },
+    {
+      label: 'Avg Price',
+      key  : 'avgPrice',
+      fmt  : (v, inf) => `${v.toFixed(2)} (${(v * (inf.contracts || 0)).toFixed(2)})`,
+    },
+    { label: 'Mark Price', key: 'markPrice', fmt: (v) => v.toFixed(2) },
+    { label: 'Used Bid',   key: 'usedBid',   fmt: (v) => v.toFixed(2) },
+    { label: 'Max Size',   key: 'maxSize',   fmt: (v) => v.toFixed(2) },
+  ];
+  if (!order.some((k) => stages[k]?.optionInfo)) return null;
+  return (
+    <div className="option-table-wrapper">
+      <table className="option-table">
+        <thead>
+          <tr>
+            <th style={{ width: 140 }}></th>
+            {order.map((k) => <th key={k}>{stages[k] ? k.toUpperCase() : ''}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({ label, key, fmt }) => (
+            <tr key={key}>
+              <td>{label}</td>
+              {order.map((k) => {
+                const inf = stages[k]?.optionInfo;
+                const val = inf?.[key];
+                if (key === 'name' && typeof val === 'string') {
+                  const t = getOptionTypeFromName(val); // 'C' | 'P' | null
+                  const color =
+                    t === 'C' ? '#e74c3c' :
+                    t === 'P' ? '#2ecc71' : undefined;
+                  return (
+                    <td key={k + key}>
+                      <span style={{ color }}>{val}</span>
+                    </td>
+                  );
+                }
+                return (
+                  <td key={k + key}>{val == null ? '-' : fmt ? fmt(val, inf) : val}</td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+/* ─── главный компонент ───────────────────────────────────── */
+export default function App() {
+  /* heartbeat-таймер */
+  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
+  useEffect(() => {
+    const id = setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  /* Firebase */
+  const { data: dashboard, connected: dbConnected } = useFirebaseData('dashboard');
+  /* форма настроек */
+  const [form, setForm] = useState({
+    coin           : DEFAULT_SETTINGS.coin,
+    number_candles : String(DEFAULT_SETTINGS.number_candles),
+    interv         : String(DEFAULT_SETTINGS.interv),
+  });
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const onChange  = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+  const onSubmit  = useCallback(
+    (e) => {
+      e.preventDefault();
+      setSettings({
+        coin          : normalizeCoin(form.coin),
+        number_candles: normalizeLimit(form.number_candles),
+        interv        : normalizeInterv(form.interv),
+      });
+    },
+    [form],
+  );
+  /* чек-боксы видимости линий */
+  const [visible, setVisible] = useState({ first: true, second: true });
+  /* ---------- stages ---------- */
+  const stages = useMemo(() => {
+    const res = {}, st = dashboard?.stages || {};
+    for (const [k, obj] of Object.entries(st)) {
+      if (!obj?.exist || !obj.position?.exist) continue;
+      const entry   = obj.position.position_info?.entryPx ?? null;
+      const lower   = obj.lower_perc ?? null;
+      const upper   = obj.upper_perc ?? null;
+      const openUts = toUnixSeconds(obj.position.open_time);
+      const h2e     = obj.position.leg?.hours_to_exp ?? null;
+      const optionName = obj.position.leg?.name || '';
+      const optType    = getOptionTypeFromName(optionName); // 'C' | 'P' | null
+      const secondStagePxRaw = obj.position?.second_stage_px;
+      const secondStagePx = Number.isFinite(Number(secondStagePxRaw))
+        ? Number(secondStagePxRaw)
+        : null;
+      let elapsed = 0, total = 0, percent = 0;
+      if (openUts && h2e != null) {
+        elapsed = Math.max(0, (nowSec - openUts) / 3600);
+        total   = elapsed + Number(h2e);
+        percent = total > 0 ? Math.min(100, Math.max(0, (elapsed / total) * 100)) : 0;
+      }
+      res[k] = {
+        baseCoin : (obj.base_coin || 'SOL').toUpperCase(),
+        entryPx  : entry,
+        sl       : entry && lower != null ? entry * (1 - lower) : null,
+        tp       : entry && upper != null ? entry * (1 + upper) : null,
+        qty      : obj.position.position_info?.size ?? null,
+        futPnl   : obj.position.position_info?.unrealizedPnl ?? null,
+        optPnl   : obj.position.leg?.info?.unrealisedPnl ?? null,
+        optionInfo: {
+          name          : optionName,
+          contracts     : obj.position.leg?.contracts,
+          unrealisedPnl : obj.position.leg?.info?.unrealisedPnl,
+          avgPrice      : obj.position.leg?.info?.avgPrice,
+          markPrice     : obj.position.leg?.info?.markPrice,
+          usedBid       : obj.position.leg?.info?.used_bid,
+          maxSize       : obj.position.leg?.info?.max_size,
+        },
+        optType,
+        colors   : STAGE_COLORS[k] || {},
+        progress : { elapsed, remaining: h2e, percent },
+        openTime : openUts,
+        secondStagePx,
+      };
+    }
+    return res;
+  }, [dashboard, nowSec]);
+  /* ---------- simulation positions ---------- */
+  const [simUpdatedAt, setSimUpdatedAt] = useState(null);
+  const prevSimJsonRef = useRef(null);
+  const simulationPositions = useMemo(() => {
+    const sim = dashboard?.stages?.simulation;
+    if (!sim) return null;
+    const map = {};
+    ['position_1', 'position_2', 'position_3'].forEach((k) => {
+      const p = sim[k];
+      if (!p) return;
+      map[k] = {
+        symbol      : p.symbol,
+        ask         : p.ask,
+        askIndicators: p.ask_indicators,
+        askOriginal : p.ask_original,
+        bestTargBid : p.best_targ_bid,
+        lowerPerc   : p.lower_perc,
+        maxAmount   : p.max_amount,
+        pt          : p.p_t,
+        pnl         : p.pnl,
+        pnlUpper    : p.pnl_upper,
+        strikePerc  : p.strike_perc,
+        upperPerc   : p.upper_perc,
+        qty         : p.qty,
+        pnlLower    : p.pnl_lower,
+        iv          : p.iv,
+        qFrac       : p.q_frac,
+      };
+    });
+    return Object.keys(map).length ? map : null;
+  }, [dashboard]);
+  /* --- метаданные симуляции (для вывода рядом с таймером) --- */
+  const simMeta = useMemo(() => {
+    const sim = dashboard?.stages?.simulation;
+    if (!sim) return null;
+    return {
+      relAtr        : Array.isArray(sim.atr) ? sim.atr[1] : null,
+      periodAvgPnl  : sim.period_avg_pnl ?? null,
+      weNeed        : sim.we_need ?? null,
+      RR25          : sim.RR25 ?? null,
+      stab_score    : sim.stable_score ?? null,
+      stab_conf     : sim.stable_conf ?? null,
+      exp1          : dashboard?.stages?.first?.expect,
+      exp2          : dashboard?.stages?.second?.expect,
+    };
+  }, [dashboard]);
+  useEffect(() => {
+    const json = simulationPositions ? JSON.stringify(simulationPositions) : null;
+    if (json !== prevSimJsonRef.current) {
+      prevSimJsonRef.current = json;
+      if (simulationPositions) setSimUpdatedAt(Date.now());
+    }
+  }, [simulationPositions]);
+  /* позиции → массив для графиков */
+  const chartPositions = useMemo(
+    () => Object.entries(stages).map(([k, v]) => ({ key: k, visible: visible[k], ...v })),
+    [stages, visible],
+  );
+  /* группируем по монетам */
+  const positionsByCoin = useMemo(() => {
+    const m = {};
+    chartPositions.forEach((p) => (m[`${p.baseCoin}USDT`] ||= []).push(p));
+    return m;
+  }, [chartPositions]);
+  /* список вкладок */
+  const tabCoins = Object.keys(positionsByCoin).length
+    ? Object.keys(positionsByCoin)
+    : [settings.coin];
+  /* суммарные uPnL */
+  const totals = useMemo(() => {
+    let fut = 0, opt = 0;
+    for (const v of Object.values(stages)) {
+      fut += Number(v.futPnl || 0);
+      opt += Number(v.optPnl || 0);
+    }
+    return { fut, opt, total: fut + opt };
+  }, [stages]);
+  /* статус активного графика */
+  const [chartStatus, setChartStatus] = useState({
+    coin: tabCoins[0],
+    wsConnected: false,
+    candleCount: 0,
+    reconnect: () => {},
+  });
+  /* -- СИНХРОН С «Coin» ТОЛЬКО ЕСЛИ ФАКТИЧЕСКИ ПОМЕНЯЛСЯ АКТИВНЫЙ ГРАФИК ---- */
+  const prevChartCoinRef = useRef(chartStatus.coin);
+  useEffect(() => {
+    if (
+      chartStatus.coin &&
+      chartStatus.coin !== form.coin &&
+      chartStatus.coin !== prevChartCoinRef.current
+    ) {
+      setForm((prev) => ({ ...prev, coin: chartStatus.coin }));
+    }
+    prevChartCoinRef.current = chartStatus.coin;
+  }, [chartStatus.coin, form.coin]);
+  /* ─── JSX ──────────────────────────────────────────────── */
+  return (
+    <div className="app-container">
+      {/* верхняя панель настроек */}
+      <form className="form-row" onSubmit={onSubmit}>
+        <label>
+          Coin
+          <input
+            name="coin"
+            value={form.coin}
+            onChange={onChange}
+            autoComplete="off"
+            spellCheck="false"
+          />
+        </label>
+        <label>
+          Candles
+          <input
+            type="number"
+            name="number_candles"
+            min="1"
+            max="1500"
+            value={form.number_candles}
+            onChange={onChange}
+          />
+        </label>
+        <label>
+          Interval&nbsp;(m)
+          <input
+            type="number"
+            name="interv"
+            min="1"
+            value={form.interv}
+            onChange={onChange}
+          />
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={visible.first}
+            onChange={(e) => setVisible((p) => ({ ...p, first: e.target.checked }))}
+          />
+          first
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={visible.second}
+            onChange={(e) => setVisible((p) => ({ ...p, second: e.target.checked }))}
+          />
+          second
+        </label>
+        <button type="submit">Load</button>
+      </form>
+      {/* контент */}
+      <div className="main-content">
+        <ChartTabs
+          coins={tabCoins}
+          number_candles={settings.number_candles}
+          interv={settings.interv}
+          positionsByCoin={positionsByCoin}
+          onStatusChange={setChartStatus}
+        />
+        <StatsPanel
+          stages={{
+            first : stages.first  && {
+              futPnl: stages.first.futPnl,
+              optPnl: stages.first.optPnl,
+              total : Number(stages.first.futPnl || 0) + Number(stages.first.optPnl || 0),
+            },
+            second: stages.second && {
+              futPnl: stages.second.futPnl,
+              optPnl: stages.second.optPnl,
+              total : Number(stages.second.futPnl || 0) + Number(stages.second.optPnl || 0),
+            },
+          }}
+          totals={totals}
+        />
+      </div>
+      {/* прогресс-бары */}
+      {['first', 'second'].map((k) => {
+        const pr = stages[k]?.progress;
+        if (!pr || pr.remaining == null) return null;
+        const lbl = `${k}: прошло ${pr.elapsed.toFixed(1)} ч / осталось ${pr.remaining.toFixed(1)} ч`;
+        return (
+          <div className="progress-wrapper" key={'p' + k}>
+            <div className="progress-label">{lbl}</div>
+            <div className="progress-bar">
+              <div
+                className="progress-fill-absolute"
+                style={{ width: `${pr.percent}%`, background: stages[k].colors.entry }}
+              />
+            </div>
+          </div>
+        );
+      })}
+      {/* таблица опционов first/second */}
+      <OptionTable stages={stages} />
+      {/* таблица simulation + таймер + метрики */}
+      <SimulationTable
+        positions={simulationPositions}
+        updatedAt={simUpdatedAt}
+        simMeta={simMeta}
+      />
+      {/* нижняя строка */}
+      <div className="status-bar">
+        <span>
+          Chart&nbsp;WS:&nbsp;
+          {chartStatus.wsConnected ? 'Connected' : 'Disconnected'}
+          {!chartStatus.wsConnected && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                try { chartStatus.reconnect?.(); } catch (err) { console.error(err); }
+              }}
+              title="Reconnect WebSocket now"
+              aria-label="Reconnect WebSocket"
+              style={{
+                marginLeft   : 6,
+                padding      : '0 6px',
+                background   : '#333',
+                color        : '#fff',
+                border       : '1px solid #555',
+                borderRadius : 3,
+                cursor       : 'pointer',
+                fontSize     : 12,
+                lineHeight   : '14px',
+                pointerEvents: 'auto',
+              }}
+            >
+              ↻
+            </button>
+          )}
+        </span>
+        <span>DB:&nbsp;{dbConnected ? 'Connected' : 'Disconnected'}</span>
+        <span>{`Showing ${chartStatus.candleCount} candles for ${chartStatus.coin} @ ${settings.interv}m`}</span>
+      </div>
+    </div>
+  );
+}
+--------------------------------------------------------------------------------
+./src/index.css:
+/* === Палитра и базовые переменные === */
+:root{
+  --bg: #0f0f0f;
+  --panel: #161616;
+  --panel-2: #181818;
+  --border: #2a2a2a;
+  --text: #f1f1f1;
+  --muted: #a8a8a8;
+  --accent: #3a7afe;
+  --accent-2: #6a5acd;
+}
+/* === Базовая типографика и сброс === */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  -webkit-tap-highlight-color: transparent;
+}
+* { box-sizing: border-box; }
+a { color: #61dafb; }
+/* === Контейнер приложения === */
+.app-container {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  touch-action: pan-x pan-y;
+}
+/* === Верхняя форма === */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+}
+.form-row label {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+}
+.form-row input,
+.form-row select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #202020;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+.form-row input:focus,
+.form-row select:focus {
+  border-color: #3a3a3a;
+  box-shadow: 0 0 0 2px rgba(58,122,254,0.15);
+}
+.form-row label.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-start;
+}
+.form-row button {
+  padding: 10px 12px;
+  border: 1px solid #2b2b2b;
+  border-radius: 6px;
+  background: linear-gradient(180deg, var(--accent), #2b62e6);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .06s ease, filter .2s ease;
+}
+.form-row button:active { transform: translateY(1px); }
+.form-row button:hover { filter: brightness(1.05); }
+/* === Основной блок: график + правая панель === */
+.main-content{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  column-gap: 14px;
+  align-items: start;
+  width: 100%;
+}
+/* Контейнер вкладок/графика */
+.chart-tabs-root{
+  min-width: 0;
+}
+/* Обёртка и контейнер графика */
+.chart-wrapper{
+  width: 100%;
+  height: auto;
+  min-height: 60vh;
+  background: #121212;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset, 0 10px 30px rgba(0,0,0,0.35);
+}
+.chart-container {
+  width: 100%;
+  height: 100%;
+}
+/* Вкладки графиков */
+.chart-tabs-header {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px 0 10px;
+  background: transparent;
+}
+.chart-tabs-header .tab {
+  padding: 6px 12px;
+  background: #202020;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #d0d0d0;
+  border-radius: 8px 8px 0 0;
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+.chart-tabs-header .tab:hover { background: #242424; }
+.chart-tabs-header .tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: #2554d6;
+}
+/* Правая панель (статистика) */
+.stats-panel{
+  position: sticky;
+  top: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+.stats-title {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ddd;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pos-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+  color: #ddd;
+}
+.stats-row.total { font-weight: 600; }
+.overall-row { margin-top: 10px; }
+/* Эффект вспышки чисел */
+.flash-val {
+  transition: transform 0.4s ease, background 0.4s ease;
+  padding: 0 4px;
+  border-radius: 4px;
+}
+.flash-val.flash { transform: scale(1.12); }
+.flash-val.up   { background: rgba(0, 200, 0, 0.15); }
+.flash-val.down { background: rgba(220, 0, 0, 0.15); }
+/* Таблица в StatsPanel */
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.stats-table th,
+.stats-table td { padding: 6px 8px; }
+.stats-table thead th {
+  background: #1e1e1e;
+  color: #cfcfcf;
+  border-bottom: 1px solid var(--border);
+}
+.stats-table .metric-cell { text-align: left; color: #ccc; }
+.stats-table .data-cell   { text-align: right; }
+/* === Прогресс-бары === */
+.progress-wrapper {
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border-top: 1px solid var(--border);
+}
+.progress-label {
+  font-size: 12px;
+  margin-bottom: 6px;
+  color: #cfcfcf;
+}
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #2a2a2a;
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+}
+.progress-fill-absolute {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-2), #8a2be2);
+  transition: width 0.35s ease;
+  opacity: 0.9;
+}
+/* === Опционная/симуляционная таблица === */
+.option-table-wrapper {
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border-top: 1px solid var(--border);
+}
+.option-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.option-table thead th {
+  background: #1f1f1f;
+  color: #dcdcdc;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.option-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #222;
+  color: #ddd;
+}
+.option-table tr:nth-child(even) td { background: #141414; }
+.option-table td:first-child {
+  color: #9a9a9a;
+  width: 160px;
+}
+/* === Строка статуса (поверх любых слоёв графика) === */
+.status-bar {
+  padding: 8px 12px;
+  font-size: 12px;
+  background: var(--panel-2);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 5; /* гарантируем кликабельность кнопки перезапуска */
+}
+/* === Мобильная верстка === */
+@media (max-width: 1024px) {
+  .chart-wrapper { min-height: 48vh; }
+}
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px 10px;
+  }
+  .form-row input,
+  .form-row select { padding: 6px 8px; font-size: 13px; }
+  .form-row button { grid-column: 1 / -1; padding: 10px 0; }
+  .main-content { display: block; }
+  .stats-panel { position: relative; top: 0; margin-top: 10px; }
+  .option-table-wrapper { margin-top: 8px; }
+  .chart-wrapper{ min-height: 320px; border-radius: 8px; }
+}
+--------------------------------------------------------------------------------
+./src/firebase.js:
+import { initializeApp } from 'firebase/app';
+import { getDatabase } from 'firebase/database';
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+};
+if (import.meta.env.PROD) {
+  console.log('[firebaseConfig PROD]', firebaseConfig);
+}
+if (
+  !firebaseConfig.databaseURL ||
+  !firebaseConfig.databaseURL.startsWith('https://')
+) {
+  throw new Error(
+    `Wrong or missing VITE_FIREBASE_DATABASE_URL: "${firebaseConfig.databaseURL}".`
+  );
+}
+const app = initializeApp(firebaseConfig);
+export const db = getDatabase(app, firebaseConfig.databaseURL);
+--------------------------------------------------------------------------------
+./src/App.css:
+/* Full-width корневой контейнер приложения */
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  display: block;
+}
+/* Ненужное из шаблона оставим нейтрально – не мешает, но и не влияет */
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover { filter: drop-shadow(0 0 2em #646cffaa); }
+.logo.react:hover { filter: drop-shadow(0 0 2em #61dafbaa); }
+@keyframes logo-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo { animation: logo-spin infinite 20s linear; }
+}
+.card { padding: 2em; }
+.read-the-docs { color: #888; }
+--------------------------------------------------------------------------------
+./src/main.jsx:
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.jsx';
+import './index.css';
+console.log('[main.jsx] starting render');
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <App />
+);
+--------------------------------------------------------------------------------
+./src/assets/react.svg:
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
+--------------------------------------------------------------------------------
+./src/utils/intervals.js:
+export function minutesToBinanceInterval(minutes) {
+  if (minutes === 1) return '1m';
+  if (minutes === 3) return '3m';
+  if (minutes === 5) return '5m';
+  if (minutes === 15) return '15m';
+  if (minutes === 30) return '30m';
+  if (minutes === 60) return '1h';
+  if (minutes === 120) return '2h';
+  if (minutes === 240) return '4h';
+  if (minutes === 360) return '6h';
+  if (minutes === 480) return '8h';
+  if (minutes === 720) return '12h';
+  if (minutes === 1440) return '1d';
+  if (minutes === 4320) return '3d';
+  if (minutes === 10080) return '1w';
+  if (minutes === 43200) return '1M';
+  return '1m';
+}
+--------------------------------------------------------------------------------
+./src/components/SimulationTable.jsx:
+import { useEffect, useState } from 'react';
+import ValueFlash from './ValueFlash.jsx';
+/** Определяем тип опциона по имени: 6-й символ с конца (C или P). */
+function getOptionTypeFromName(name) {
+  if (!name || typeof name !== 'string') return null;
+  const idx = name.length - 6;
+  if (idx < 0) return null;
+  const ch = String(name[idx]).toUpperCase();
+  return ch === 'C' || ch === 'P' ? ch : null;
+}
+/**
+ * Панель simulation с таймером последнего обновления,
+ * анимированным PnL (ValueFlash) и компактными метаданными.
+ *
+ * props:
+ *   positions  – объект { position_1:{…}, position_2:{…}, … } | null
+ *   updatedAt  – время последнего получения данных (ms)       | null
+ *   simMeta    – объект { relAtr, periodAvgDist, periodAvgPnl, weNeed } | null
+ */
+export default function SimulationTable({ positions = null, updatedAt = null, simMeta = null }) {
+  /* ——— таймер «секунд с последнего обновления» ——— */
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const secondsAgo =
+    updatedAt == null ? null : Math.max(0, Math.floor((now - updatedAt) / 1000));
+  /* ——— данные существуют? ——— */
+  const order = ['position_1', 'position_2', 'position_3'].filter(
+    (k) => positions && positions[k]
+  );
+  if (!order.length) return null;
+  /* строки-метрики (PnL – первый, flash = true) */
+  const rows = [
+    { label: 'PnL', key: 'pnl', fmt: (v) => v.toFixed(2), flash: true },
+    {
+      label: 'Symbol',
+      key: 'symbol',
+      fmt: (v) => {
+        const t = getOptionTypeFromName(v);
+        const color =
+          t === 'C' ? '#e74c3c' :
+          t === 'P' ? '#2ecc71' : undefined;
+        return <span style={{ color }}>{v}</span>;
+      },
+    },
+    { label: 'Ask',          key: 'ask',          fmt: (v) => v.toFixed(2) },
+    { label: 'Ask original', key: 'askOriginal',  fmt: (v) => v.toFixed(2) },
+    { label: 'Target bid',   key: 'bestTargBid',  fmt: (v) => v.toFixed(2) },
+    { label: 'p_t',          key: 'pt',           fmt: (v) => v.toFixed(4) },
+    { label: 'Qty',          key: 'qty',          fmt: (v) => v.toFixed(6) },
+    { label: 'IV',           key: 'iv',           fmt: (v) => v.toFixed(4) },
+    { label: 'q_frac',       key: 'qFrac',        fmt: (v) => v.toFixed(6) },
+    { label: 'PnL lower',    key: 'pnlLower',     fmt: (v) => v.toFixed(2) },
+    { label: 'PnL upper',    key: 'pnlUpper',     fmt: (v) => v.toFixed(2) },
+    { label: 'Strike %',     key: 'strikePerc',   fmt: (v) => v.toFixed(4) },
+    { label: 'Lower %',      key: 'lowerPerc',    fmt: (v) => v.toFixed(4) },
+    { label: 'Upper %',      key: 'upperPerc',    fmt: (v) => v.toFixed(4) },
+    { label: 'Max amount',   key: 'maxAmount' },
+    {
+      label: 'Ask indicators',
+      key: 'askIndicators',
+      fmt: (v) =>
+        Array.isArray(v) ? v.map((n) => n.toFixed(3)).join(' / ') : '-',
+    },
+  ];
+  /* ——— компактная строка с таймером + метаданными симуляции ——— */
+  const metaLabel = (title, val, fmt) => (
+    <span title={title} style={{ whiteSpace: 'nowrap' }}>
+      {title}: {val == null ? '—' : fmt ? fmt(val) : val}
+    </span>
+  );
+  return (
+    <div className="option-table-wrapper">
+      {/* - таймер и метрики в одну строку - */}
+      <div
+        style={{
+          fontSize: 12,
+          marginBottom: 4,
+          color: '#ccc',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexWrap: 'wrap',
+        }}
+      >
+        <span>
+          Last update:&nbsp;{secondsAgo == null ? '—' : `${secondsAgo}s ago`}
+        </span>
+        {simMeta && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', color: '#ddd' }}>
+            {metaLabel('ATR(rel)', simMeta.relAtr, (v) => Number(v).toFixed(4))}
+            {metaLabel('PnL(avg)', simMeta.periodAvgPnl, (v) => Number(v).toFixed(3))}
+            {metaLabel('Exp_1', simMeta.exp1, (v) => Number(v).toFixed(2))}
+            {metaLabel('Exp_2', simMeta.exp2, (v) => Number(v).toFixed(2))}
+            {metaLabel('RR25', simMeta.RR25, (v) => Number(v).toFixed(4))}
+            {metaLabel('Stab_score', simMeta.stab_score, (v) => Number(v).toFixed(4))}
+            {metaLabel('Stab_conf', simMeta.stab_conf, (v) => Number(v).toFixed(4))}
+            {metaLabel('Need', simMeta.weNeed)}
+          </div>
+        )}
+      </div>
+      {/* --- таблица --- */}
+      <table className="option-table">
+        <thead>
+          <tr>
+            <th style={{ width: 140 }}></th>
+            {order.map((k) => (
+              <th key={k}>{k.replace('position_', 'sim_')}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({ label, key, fmt, flash }) => (
+            <tr key={key}>
+              <td>{label}</td>
+              {order.map((k) => {
+                const val = positions[k]?.[key];
+                if (flash) {
+                  return (
+                    <td
+                      key={k + key}
+                      style={{ fontWeight: 600, fontSize: 14 }}
+                    >
+                      {val == null ? (
+                        '-'
+                      ) : (
+                        <ValueFlash
+                          value={val}
+                          formatter={(v) => v.toFixed(2)}
+                        />
+                      )}
+                    </td>
+                  );
+                }
+                return (
+                  <td key={k + key}>
+                    {val == null ? '-' : fmt ? fmt(val) : val}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+--------------------------------------------------------------------------------
+./src/components/ValueFlash.jsx:
+import { useEffect, useRef, useState } from 'react';
+/**
+ * Число «подпрыгивает» (scale) и на‑лету окрашивается:
+ *   • зелёный фон — значение выросло;
+ *   • красный фон — значение снизилось.
+ */
+export default function ValueFlash({
+  value,
+  formatter = (v) => (v == null ? '-' : v),
+  duration = 500,            // длительность подпрыгивания, мс
+}) {
+  const prevValRef = useRef(value);
+  const [flash, setFlash]       = useState(false);   // scale‑эффект
+  const [direction, setDir]     = useState('none');  // up / down / none
+  /* ---------- обработка изменения входного значения ---------- */
+  useEffect(() => {
+    if (prevValRef.current !== value) {
+      const newDir =
+        prevValRef.current == null || value == null
+          ? 'none'
+          : value > prevValRef.current
+          ? 'up'
+          : value < prevValRef.current
+          ? 'down'
+          : 'none';
+      setDir(newDir);
+      setFlash(true);                     // запускаем «подпрыгивание»
+      const t = setTimeout(() => setFlash(false), duration);
+      prevValRef.current = value;         // фиксируем новое значение
+      return () => clearTimeout(t);
+    }
+  }, [value, duration]);
+  return (
+    <span className={`flash-val ${flash ? 'flash' : ''} ${direction}`}>
+      {formatter(value)}
+    </span>
+  );
+}
+--------------------------------------------------------------------------------
+./src/components/StatsPanel.jsx:
+import ValueFlash from './ValueFlash.jsx';
+/**
+ * props:
+ *   stages = { first:{futPnl,optPnl,total}, second:{…} }
+ *   totals = { fut, opt, total }
+ */
+export default function StatsPanel({ stages = {}, totals = {} }) {
+  /* какие стадии действительно существуют */
+  const cols = ['first', 'second'].filter((k) => stages[k]);
+  /* строки‑метрики */
+  const metrics = [
+    { label: 'Futures uPnL', key: 'futPnl' },
+    { label: 'Options uPnL', key: 'optPnl' },
+    { label: 'Total uPnL',   key: 'total'  },
+  ];
+  return (
+    <aside className="stats-panel">
+      <h3 className="stats-title">
+        Positions&nbsp;
+        <span
+          className="pos-dot"
+          title={cols.length ? 'Есть активная позиция' : 'Позиции нет'}
+          style={{ background: cols.length ? '#00cc66' : '#cc0033' }}
+        />
+      </h3>
+      {cols.length ? (
+        <table className="stats-table">
+          {/* фиксируем ширины колонок: 45% — метрика, остальное поровну на данные */}
+          <colgroup>
+            <col style={{ width: '45%' }} />
+            {cols.map(() => (
+              <col key={Math.random()} style={{ width: `${55 / cols.length}%` }} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr>
+              <th className="metric-cell"></th>
+              {cols.map((k) => (
+                <th key={k} className="data-cell">{k}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {metrics.map(({ label, key }) => (
+              <tr key={key}>
+                <td className="metric-cell">{label}</td>
+                {cols.map((k) => (
+                  <td key={k + key} className="data-cell">
+                    <ValueFlash
+                      value={stages[k][key]}
+                      formatter={(v) => (v == null ? '-' : Number(v).toFixed(2))}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div style={{ fontSize: 12, color: '#888' }}>No active positions</div>
+      )}
+      <div className="stats-row total overall-row">
+        <span>Overall Total uPnL:</span>
+        <ValueFlash
+          value={totals.total}
+          formatter={(v) => (v == null ? '-' : Number(v).toFixed(2))}
+        />
+      </div>
+    </aside>
+  );
+}
+--------------------------------------------------------------------------------
+./src/components/Chart.jsx:
+import { useEffect, useRef } from 'react';
+import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
+/**
+ * props:
+ *   candles   – [{ time, open, high, low, close }]
+ *   positions – [{
+ *       key, visible, entryPx, sl, tp, qty, colors, openTime, optType?,
+ *       secondStagePx?   // ←— НОВОЕ: уровень «второго этапа» (если != 0, рисуем)
+ *   }]
+ */
+export default function Chart({ candles, positions = [] }) {
+  const containerRef = useRef(null);
+  const chartRef     = useRef(null);
+  const seriesRef    = useRef(null);
+  const prevLen   = useRef(0);
+  const prevFirst = useRef(null);
+  const fitDone   = useRef(false);
+  const userAtEnd = useRef(true);
+  const priceLines = useRef([]);
+  const markersRef = useRef([]);
+  /* ——— подгоняем размер под фактическую высоту .chart-wrapper ——— */
+  const resizeChart = () => {
+    const el = containerRef.current;
+    const chart = chartRef.current;
+    if (!el || !chart) return;
+    let wrap = el;
+    while (wrap && !wrap.classList.contains('chart-wrapper')) {
+      wrap = wrap.parentElement;
+    }
+    const target = wrap || el;
+    const { width, height } = target.getBoundingClientRect();
+    if (width > 0 && height > 0) chart.resize(width, height);
+  };
+  /* ——— инициализация ——— */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.style.width  = '100%';
+    el.style.height = '100%';
+    const chart = createChart(el, {
+      layout: { background: { color: '#0f0f0f' }, textColor: '#d1d4dc' },
+      grid:   { vertLines: { color: '#2B2B43' }, horzLines: { color: '#2B2B43' } },
+      crosshair: { mode: CrosshairMode.Normal },
+      rightPriceScale: { borderVisible: false },
+      timeScale: {
+        borderVisible: false,
+        timeVisible  : true,
+        rightOffset  : 10,
+        barSpacing   : 6,
+      },
+      handleScroll: { mouseWheel: true, pressedMouseMove: true },
+      handleScale : { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+    });
+    const series = chart.addCandlestickSeries({
+      upColor      : '#26a69a',
+      downColor    : '#ef5350',
+      wickUpColor  : '#26a69a',
+      wickDownColor: '#ef5350',
+      borderVisible: false,
+      priceFormat  : { type: 'price', precision: 2, minMove: 0.01 },
+    });
+    chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+      userAtEnd.current = chart.timeScale().scrollPosition() === 0;
+    });
+    chartRef.current  = chart;
+    seriesRef.current = series;
+    window.addEventListener('resize', resizeChart);
+    window.addEventListener('orientationchange', resizeChart);
+    resizeChart();
+    return () => {
+      window.removeEventListener('resize', resizeChart);
+      window.removeEventListener('orientationchange', resizeChart);
+      chart.remove();
+    };
+  }, []);
+  /* ——— обновляем свечи ——— */
+  useEffect(() => {
+    const chart  = chartRef.current;
+    const series = seriesRef.current;
+    if (!chart || !series || candles.length === 0) return;
+    const data = candles.map(c => ({
+      time : c.time,
+      open : c.open,
+      high : c.high,
+      low  : c.low,
+      close: c.close,
+    }));
+    const first = data[0]?.time ?? null;
+    const needReset =
+      !fitDone.current ||
+      prevFirst.current == null ||
+      prevFirst.current !== first ||
+      data.length < prevLen.current;
+    if (needReset) {
+      series.setData(data);
+      chart.timeScale().fitContent();
+      fitDone.current  = true;
+      prevLen.current  = data.length;
+      prevFirst.current = first;
+      resizeChart();
+    } else {
+      const diff = data.length - prevLen.current;
+      if (diff > 0) {
+        data.slice(-diff).forEach(b => series.update(b));
+      } else {
+        series.update(data.at(-1));
+      }
+      prevLen.current = data.length;
+    }
+    if (userAtEnd.current) chart.timeScale().scrollToRealTime();
+  }, [candles]);
+  /* ——— ценовые линии ——— */
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series) return;
+    priceLines.current.forEach(l => { try { series.removePriceLine(l); } catch {} });
+    priceLines.current = [];
+    positions.forEach(p => {
+      if (!p.visible) return;
+      const add = (price, color, title) => {
+        if (price == null) return;
+        priceLines.current.push(
+          series.createPriceLine({
+            price,
+            color,
+            lineWidth: 2,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title,
+          }),
+        );
+      };
+      add(p.entryPx, p.colors?.entry, `${p.key} ${p.qty ?? ''}`.trim());
+      const isCall = String(p.optType || '').toUpperCase() === 'C';
+      const slTitle = isCall ? `${p.key} TP` : `${p.key} SL`;
+      const slColor = isCall ? p.colors?.tp  : p.colors?.sl;
+      add(p.sl, slColor, slTitle);
+      const tpTitle = isCall ? `${p.key} SL` : `${p.key} TP`;
+      const tpColor = isCall ? p.colors?.sl  : p.colors?.tp;
+      add(p.tp, tpColor, tpTitle);
+      const s2 = Number(p.secondStagePx);
+      if (Number.isFinite(s2) && s2 !== 0) {
+        const s2Color = p.colors?.secondStage || '#FFD700';
+        add(s2, s2Color, `${p.key} S2`);
+      }
+    });
+  }, [positions]);
+  /* ——— маркеры ——— */
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series) return;
+    series.setMarkers([]);
+    markersRef.current = [];
+    if (candles.length === 0) return;
+    const times = candles.map(c => c.time);
+    const markers = [];
+    positions.forEach(p => {
+      if (!p.visible || !p.openTime) return;
+      let closest = times[0], min = Math.abs(p.openTime - times[0]);
+      for (let i = 1; i < times.length; i++) {
+        const d = Math.abs(p.openTime - times[i]);
+        if (d < min) { min = d; closest = times[i]; }
+      }
+      markers.push({
+        time: closest,
+        position: 'aboveBar',
+        color: p.colors?.entry,
+        shape: 'arrowDown',
+        text: '',
+      });
+    });
+    if (markers.length) series.setMarkers(markers);
+    markersRef.current = markers;
+  }, [positions, candles]);
+  return <div ref={containerRef} className="chart-container" />;
+}
+--------------------------------------------------------------------------------
+./src/components/ChartTabs.jsx:
+import { useEffect, useRef, useState } from 'react';
+import Chart from './Chart.jsx';
+import { useBinanceKlines } from '../hooks';
+/* ── График + WebSocket ───────────────────────────────────── */
+function ChartWithData({ symbol, number_candles, interv, positions, reportStatus }) {
+  const {
+    candles,
+    loading,
+    wsConnected,
+    reconnect,
+  } = useBinanceKlines({ coin: symbol, number_candles, interv });
+  /* передаём состояние наверх (для строки статуса) */
+  useEffect(() => {
+    reportStatus({
+      coin: symbol,
+      wsConnected,
+      reconnect,
+      candleCount: candles.length,
+    });
+  }, [symbol, wsConnected, reconnect, candles.length, reportStatus]);
+  return (
+    <div className="chart-wrapper">
+      {loading && <div style={{ padding: 8 }}>Loading…</div>}
+      {!loading && candles.length === 0 && <div style={{ padding: 8 }}>No data.</div>}
+      {candles.length > 0 && <Chart candles={candles} positions={positions} />}
+    </div>
+  );
+}
+/* ── Вкладки ──────────────────────────────────────────────── */
+export default function ChartTabs({
+  coins = [],
+  number_candles,
+  interv,
+  positionsByCoin = {},
+  onStatusChange,
+}) {
+  /* активную вкладку храним отдельно и СИНХРОНИЗИРУЕМ с coins  */
+  const [active, setActive] = useState(coins[0] || '');
+  const lastStatuses = useRef({});
+  /* если набор coins изменился, а текущий active там не найден —
+     выбираем первую доступную монету */
+  useEffect(() => {
+    if (!coins.includes(active)) {
+      setActive(coins[0] || '');
+    }
+  }, [coins, active]);
+  /* принимаем отчёты от дочерних графиков */
+  const handleReport = (st) => {
+    lastStatuses.current[st.coin] = st;
+    if (st.coin === active) {
+      onStatusChange(st);
+    }
+  };
+  /* смена active → обновляем строку статуса */
+  useEffect(() => {
+    const st = lastStatuses.current[active];
+    if (st) onStatusChange(st);
+  }, [active, onStatusChange]);
+  return (
+    <div className="chart-tabs-root">
+      {/* заголовок вкладок (если монет > 1) */}
+      {coins.length > 1 && (
+        <div className="chart-tabs-header">
+          {coins.map((c) => (
+            <button
+              key={c}
+              className={`tab${c === active ? ' active' : ''}`}
+              onClick={() => setActive(c)}
+            >
+              {c.replace('USDT', '')}
+            </button>
+          ))}
+        </div>
+      )}
+      {/* контейнер с графиками */}
+      <div
+        style={{
+          flex: '1 1 0',
+          position: 'relative',
+          minHeight: 0, // разрешаем flex-сжатие
+        }}
+      >
+        {coins.map((c) => (
+          <div
+            key={c}
+            style={{
+              position: c === active ? 'relative' : 'absolute',
+              inset: 0,
+              visibility: c === active ? 'visible' : 'hidden',
+              display: 'flex',
+              flex: '1 1 0',
+              flexDirection: 'column',
+              height: '100%',
+              width: '100%',
+            }}
+          >
+            <ChartWithData
+              symbol={c}
+              number_candles={number_candles}
+              interv={interv}
+              positions={positionsByCoin[c] || []}
+              reportStatus={handleReport}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+--------------------------------------------------------------------------------
+./src/services/binance.js:
+import { minutesToBinanceInterval } from '../utils/intervals';
+const FUTURES_BASE_URL = 'https://fapi.binance.com';
+const WS_BASE_URL = 'wss://fstream.binance.com/ws';
+export async function fetchKlines(coin, number_candles, intervMinutes) {
+  const intervalString = minutesToBinanceInterval(Number(intervMinutes));
+  const limit = Math.min(1500, Math.max(1, Math.floor(Number(number_candles))));
+  const symbol = (coin || '').toUpperCase();
+  const endpoint = `/fapi/v1/klines?symbol=${symbol}&interval=${intervalString}&limit=${limit}`;
+  const url = FUTURES_BASE_URL + endpoint;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+  const data = await res.json();
+  return data.map((x) => ({
+    time: Math.floor(x[0] / 1000),
+    open: parseFloat(x[1]),
+    high: parseFloat(x[2]),
+    low: parseFloat(x[3]),
+    close: parseFloat(x[4]),
+    volume: parseFloat(x[5]),
+  }));
+}
+export function createKlineWebSocket(coin, intervMinutes, onKline) {
+  const intervalString = minutesToBinanceInterval(Number(intervMinutes));
+  const stream = `${(coin || '').toLowerCase()}@kline_${intervalString}`;
+  const ws = new WebSocket(`${WS_BASE_URL}/${stream}`);
+  ws.onmessage = (e) => {
+    try {
+      const json = JSON.parse(e.data);
+      if (!json.k) return;
+      const k = json.k;
+      const candle = {
+        time: Math.floor(k.t / 1000),
+        open: parseFloat(k.o),
+        high: parseFloat(k.h),
+        low: parseFloat(k.l),
+        close: parseFloat(k.c),
+        volume: parseFloat(k.v),
+      };
+      onKline(candle, k.x === true);
+    } catch (err) {
+      console.error('WS parse error', err);
+    }
+  };
+  ws.onerror = (err) => {
+    console.error('WebSocket error', err);
+  };
+  return ws;
+}
+--------------------------------------------------------------------------------
+./src/hooks/useBinanceKlines.js:
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { fetchKlines, createKlineWebSocket } from '../services/binance';
+/**
+ * Загружает initial-свечи и поддерживает живое WebSocket-подключение
+ * с автоматическим и ручным (reconnect) переподключением.
+ *
+ * Возвращает:
+ *   • candles      – массив свечей;
+ *   • loading      – флаг начальной загрузки;
+ *   • wsConnected  – состояние WS;
+ *   • reconnect()  – функция для мгновенного переподключения.
+ */
+export function useBinanceKlines(settings) {
+  const { coin, number_candles, interv } = settings;
+  const [candles,      setCandles]     = useState([]);
+  const [loading,      setLoading]     = useState(false);
+  const [wsConnected,  setWsConnected] = useState(false);
+  const wsRef           = useRef(null);
+  const reconnectRef    = useRef(null);    // id тайм-аута авто-переподключения
+  const closedManual    = useRef(false);   // размонтирование хука
+  const connectingRef   = useRef(false);   // защита от параллельных connectWS()
+  /* ---------- начальная загрузка свечей ---------- */
+  const loadInitial = useCallback(async (signal) => {
+    setLoading(true);
+    try {
+      const data = await fetchKlines(coin, number_candles, interv);
+      if (signal?.aborted) return;
+      setCandles(data);
+    } catch (e) {
+      if (!signal?.aborted) {
+        console.error('Failed to fetch klines:', e);
+        setCandles([]);
+      }
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
+  }, [coin, number_candles, interv]);
+  /* ---------- функция подключения к WS (может вызываться повторно) ---------- */
+  const connectWS = useCallback(async () => {
+    if (connectingRef.current) return;
+    connectingRef.current = true;
+    if (reconnectRef.current) {
+      clearTimeout(reconnectRef.current);
+      reconnectRef.current = null;
+    }
+    const prev = wsRef.current;
+    if (prev) {
+      try { prev.close(); } catch {}
+      wsRef.current = null;
+    }
+    try {
+      const fresh = await fetchKlines(coin, number_candles, interv);
+      setCandles(fresh);
+    } catch (e) {
+      console.warn('Reconnect fetch klines failed (will continue with WS):', e);
+    }
+    const ws = createKlineWebSocket(coin, interv, (candle) => {
+      setCandles(prevArr => {
+        if (prevArr.length === 0) return [candle];
+        const last = prevArr[prevArr.length - 1];
+        if (candle.time === last.time) {
+          const updated = [...prevArr];
+          updated[updated.length - 1] = candle;
+          return updated;
+        }
+        return candle.time > last.time ? [...prevArr, candle] : prevArr;
+      });
+    });
+    wsRef.current = ws;
+    const scheduleReconnect = () => {
+      if (closedManual.current || reconnectRef.current) return;
+      if (wsRef.current !== ws) return;
+      reconnectRef.current = setTimeout(() => {
+        reconnectRef.current = null;
+        connectWS();
+      }, 5_000);
+    };
+    ws.onopen = () => {
+      setWsConnected(true);
+      if (reconnectRef.current) {
+        clearTimeout(reconnectRef.current);
+        reconnectRef.current = null;
+      }
+      connectingRef.current = false; // <— КРИТИЧЕСКОЕ: снимаем блокировку
+    };
+    ws.onclose = () => {
+      setWsConnected(false);
+      connectingRef.current = false; // <— КРИТИЧЕСКОЕ: снимаем блокировку даже если onopen не случился
+      scheduleReconnect();
+    };
+    ws.onerror = (err) => {
+      console.error('WebSocket error', err);
+      connectingRef.current = false; // <— КРИТИЧЕСКОЕ: иначе «залипнет»
+      try { ws.close(); } catch {}
+    };
+  }, [coin, interv, number_candles]);
+  /* ---------- эффекты ---------- */
+  useEffect(() => {
+    const ac = new AbortController();
+    loadInitial(ac.signal);
+    return () => ac.abort();
+  }, [loadInitial]);
+  useEffect(() => {
+    closedManual.current = false;
+    if (!loading) connectWS();
+    return () => {
+      closedManual.current = true;
+      try { wsRef.current?.close(); } catch {}
+      if (reconnectRef.current) {
+        clearTimeout(reconnectRef.current);
+        reconnectRef.current = null;
+      }
+    };
+  }, [loading, connectWS]);
+  /* ---------- публичный интерфейс хука ---------- */
+  return {
+    candles,
+    loading,
+    wsConnected,
+    reconnect: connectWS,    // ручное мгновенное переподключение
+  };
+}
+--------------------------------------------------------------------------------
+./src/hooks/index.js:
+export { useBinanceKlines }    from './useBinanceKlines.js';
+export { useFirebaseData }     from './useFirebaseData.js';
+--------------------------------------------------------------------------------
+./src/hooks/useFirebaseData.js:
+import { useState, useEffect } from 'react';
+import { ref, onValue, off } from 'firebase/database';
+import { db } from '../firebase';
+/**
+ * Подписка на Realtime Database + статус подключения.
+ * Возвращает { data, connected }.
+ */
+export function useFirebaseData(path) {
+  const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+  const [state, setState] = useState({
+    data: null,
+    connected: false,
+  });
+  /* ---------- статус подключения к Firebase ---------- */
+  useEffect(() => {
+    const infoRef = ref(db, '.info/connected');
+    const handler = (snap) =>
+      setState((prev) => ({ ...prev, connected: snap.val() === true }));
+    onValue(infoRef, handler);
+    return () => off(infoRef, 'value', handler);
+  }, []);
+  /* ---------- подписка на сам путь ---------- */
+  useEffect(() => {
+    const dbRef = ref(db, normalizedPath);
+    const handler = (snap) =>
+      setState((prev) => ({ ...prev, data: snap.val() }));
+    const errorHandler = (err) =>
+      console.error('[useFirebaseData] onValue error:', err?.code, err?.message);
+    onValue(dbRef, handler, errorHandler);
+    return () => off(dbRef, 'value', handler);
+  }, [normalizedPath]);
+  return state;
+}
+--------------------------------------------------------------------------------
