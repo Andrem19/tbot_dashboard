@@ -217,7 +217,7 @@ export default function Chart({ candles, positions = [], history = [] }) {
             color: entryColor, // Серый для истории
             shape: 'arrowDown',
             // Можно добавить text: 'E', если нужно, или оставить пустым
-            text: '',
+            text: 'Open',
             size: 0.8, // Поменьше
           });
         }
