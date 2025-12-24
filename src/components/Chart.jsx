@@ -4,8 +4,8 @@ import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
 /**
  * props:
  * candles  – [{ time, open, high, low, close }]
- * positions – Активная позиция (массив)
- * history   – История сделок (массив из dashb.hist)
+ * positions – Активная позиция (Current Position)
+ * history   – История сделок (из dashb.hist)
  */
 export default function Chart({ candles, positions = [], history = [] }) {
   const containerRef = useRef(null);
@@ -15,9 +15,8 @@ export default function Chart({ candles, positions = [], history = [] }) {
   const fitDone      = useRef(false);
   const userAtEnd    = useRef(true);
   
-  // Храним ссылки на созданные линии, чтобы удалять их при обновлении
+  // Храним ссылки на линии цен, чтобы удалять их при обновлении
   const priceLines   = useRef([]);
-  const markersRef   = useRef([]);
 
   // --- Ресайз графика ---
   const resizeChart = () => {
@@ -111,7 +110,7 @@ export default function Chart({ candles, positions = [], history = [] }) {
     }
   }, [candles]);
 
-  // --- Отрисовка линий (Активные позиции + История) ---
+  // --- ЛИНИИ (Только для Активной Позиции) ---
   useEffect(() => {
     const series = seriesRef.current;
     if (!series || candles.length === 0) return;
@@ -133,78 +132,122 @@ export default function Chart({ candles, positions = [], history = [] }) {
       priceLines.current.push(line);
     };
 
-    // Время первой загруженной свечи
-    const firstCandleTime = candles[0].time;
-
-    // 2. Рендер АКТИВНЫХ позиций
+    // Рисуем линии только для positions (Active)
     positions.forEach(p => {
       if (!p.visible) return;
-      // Жирнее для активной
+      // Entry
       addLine(p.entryPx, '#3a7afe', `Entry`, LineStyle.Solid); 
+      // SL
       addLine(p.sl, '#e74c3c', `SL`);
+      // TP
       addLine(p.tp, '#2ecc71', `TP`);
     });
 
-    // 3. Рендер ИСТОРИИ (dashb.hist)
-    // Рисуем только если open_time >= времени первой свечи на графике
-    if (history && history.length > 0) {
-      history.forEach(h => {
-        // Если сделка началась раньше, чем у нас есть данные свечей — пропускаем полностью
-        if (h.timestamp_open < firstCandleTime) return;
+    // ПРИМЕЧАНИЕ: Для history мы здесь ничего не рисуем (линий нет)
 
-        // Entry (История) - Серый цвет
-        addLine(h.open_price, '#888888', 'Hist Entry', LineStyle.Dotted);
+  }, [positions, candles]); // Зависит от positions
 
-        // Close (История) - Фиолетовый + Профит
-        // Форматируем профит
-        const profitStr = h.profit > 0 ? `+${h.profit.toFixed(2)}` : `${h.profit.toFixed(2)}`;
-        addLine(h.close_price, '#9b59b6', `Close (${profitStr})`, LineStyle.Dotted);
-      });
-    }
-
-  }, [positions, candles, history]); // Перерисовываем при изменении истории или свечей
-
-  // --- Маркеры входа (только для активной позиции) ---
+  // --- МАРКЕРЫ (Активная + История) ---
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
     
+    // Сбрасываем маркеры
     series.setMarkers([]);
-    markersRef.current = [];
 
-    if (candles.length === 0 || positions.length === 0) return;
+    if (candles.length === 0) return;
 
     const candleTimes = candles.map(c => c.time);
     const markers = [];
 
-    positions.forEach(p => {
-      if (!p.openTime) return;
-      const openTs = Math.floor(p.openTime);
+    // Хелпер для поиска ближайшей свечи
+    const findClosestTime = (targetTs) => {
+      if (!targetTs) return null;
+      const ts = Math.floor(targetTs);
       
-      // Ищем ближайшую свечу
-      let closest = candleTimes[0];
-      let minDiff = Math.abs(openTs - closest);
+      // Если время далеко за пределами диапазона свечей — игнорируем
+      // Берем запас например в (интервал * 2)
+      // Для простоты: проверяем, попадает ли в диапазон мин/макс времени свечей
+      const minTime = candleTimes[0];
+      const maxTime = candleTimes[candleTimes.length - 1];
+      
+      // Если сделка была сильно раньше первой свечи, не рисуем
+      if (ts < minTime) return null; 
+      
+      // Ищем ближайшую
+      let closest = minTime;
+      let minDiff = Math.abs(ts - minTime);
 
+      // Простая итерация (можно оптимизировать бинарным, но для 1000 свечей и так быстро)
       for (let i = 1; i < candleTimes.length; i++) {
-        const diff = Math.abs(openTs - candleTimes[i]);
+        const diff = Math.abs(ts - candleTimes[i]);
         if (diff < minDiff) {
           minDiff = diff;
           closest = candleTimes[i];
         }
       }
-      
-      markers.push({
-        time: closest,
-        position: 'aboveBar',
-        color: '#f1c40f',
-        shape: 'arrowDown',
-        text: 'Entry',
-        size: 1,
-      });
+      return closest;
+    };
+
+    // 1. Маркеры для АКТИВНОЙ позиции (Entry)
+    positions.forEach(p => {
+      const t = findClosestTime(p.openTime);
+      if (t) {
+        markers.push({
+          time: t,
+          position: 'aboveBar',
+          color: '#f1c40f', // Желтый для активной
+          shape: 'arrowDown',
+          text: 'Entry',
+          size: 1,
+        });
+      }
     });
 
+    // 2. Маркеры для ИСТОРИИ (Entry + Close)
+    if (history && history.length > 0) {
+      history.forEach(h => {
+        // --- Entry Marker (History) ---
+        const tOpen = findClosestTime(h.timestamp_open);
+        if (tOpen) {
+          markers.push({
+            time: tOpen,
+            position: 'aboveBar',
+            color: '#888888', // Серый для истории
+            shape: 'arrowDown',
+            // Можно добавить text: 'E', если нужно, или оставить пустым
+            text: '',
+            size: 0.5, // Поменьше
+          });
+        }
+
+        // --- Close Marker (History) ---
+        const tClose = findClosestTime(h.close_time);
+        if (tClose) {
+          // Форматируем профит
+          const profitVal = parseFloat(h.profit || 0);
+          const profitStr = profitVal > 0 ? `+${profitVal.toFixed(2)}` : `${profitVal.toFixed(2)}`;
+          // Цвет в зависимости от профита (зеленоватый или красноватый) или просто фиолетовый
+          const pColor = profitVal >= 0 ? '#2ecc71' : '#e74c3c';
+
+          markers.push({
+            time: tClose,
+            position: 'aboveBar', // Над свечей
+            color: '#9b59b6',    // Фиолетовая стрелка
+            shape: 'arrowDown',
+            text: profitStr,     // Текст профита
+            size: 0.8,
+          });
+        }
+      });
+    }
+
+    // ВАЖНО: Маркеры должны быть отсортированы по времени
+    markers.sort((a, b) => a.time - b.time);
+
     if (markers.length) series.setMarkers(markers);
-  }, [positions, candles]);
+
+  }, [positions, candles, history]);
 
   return <div ref={containerRef} className="chart-container" />;
 }
