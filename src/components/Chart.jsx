@@ -210,14 +210,15 @@ export default function Chart({ candles, positions = [], history = [] }) {
         // --- Entry Marker (History) ---
         const tOpen = findClosestTime(h.timestamp_open);
         if (tOpen) {
+          const entryColor = h.side === 2 ? '#e74c3c' : '#3a7afe';
           markers.push({
             time: tOpen,
             position: 'aboveBar',
-            color: '#888888', // Серый для истории
+            color: entryColor, // Серый для истории
             shape: 'arrowDown',
             // Можно добавить text: 'E', если нужно, или оставить пустым
             text: '',
-            size: 0.5, // Поменьше
+            size: 0.8, // Поменьше
           });
         }
 
