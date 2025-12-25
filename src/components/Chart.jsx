@@ -4,44 +4,32 @@ import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
 /**
  * props:
  * candles  – [{ time, open, high, low, close }]
- * positions – Активная позиция (Current Position)
- * history   – История сделок (из dashb.hist)
+ * positions – Активная позиция
+ * history   – История сделок
  */
 export default function Chart({ candles, positions = [], history = [] }) {
   const containerRef = useRef(null);
   const chartRef     = useRef(null);
   const seriesRef    = useRef(null);
-  const prevLen      = useRef(0);
-  const fitDone      = useRef(false);
-  const userAtEnd    = useRef(true);
   
-  // Храним ссылки на линии цен, чтобы удалять их при обновлении
-  const priceLines   = useRef([]);
+  // Для отслеживания смены датасета
+  const firstCandleTime = useRef(null); 
+  const fitDone         = useRef(false);
+  const userAtEnd       = useRef(true);
+  
+  const priceLines      = useRef([]);
 
-  // --- Ресайз графика ---
-  const resizeChart = () => {
-    const el = containerRef.current;
-    const chart = chartRef.current;
-    if (!el || !chart) return;
-    let wrap = el;
-    while (wrap && !wrap.classList.contains('chart-wrapper')) {
-      wrap = wrap.parentElement;
-    }
-    const target = wrap || el;
-    const { width, height } = target.getBoundingClientRect();
-    if (width > 0 && height > 0) chart.resize(width, height);
-  };
-
-  // --- Инициализация ---
+  // --- Инициализация и Ресайз ---
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     
-    // Проверяем, мобильное ли устройство (ширина < 768px)
     const isMobile = window.innerWidth < 768;
 
+    // Стили контейнера, чтобы он занимал все место
     el.style.width  = '100%';
     el.style.height = '100%';
+    el.style.overflow = 'hidden'; // Важно, чтобы не вылезало
 
     const chart = createChart(el, {
       layout: { 
@@ -55,9 +43,6 @@ export default function Chart({ candles, positions = [], history = [] }) {
       crosshair: { mode: CrosshairMode.Normal },
       rightPriceScale: { 
         borderVisible: false,
-        // ВАЖНО: Увеличиваем отступы сверху и снизу (scaleMargins).
-        // 0.2 (20%) сверху и 0.2 снизу сожмут график визуально по вертикали,
-        // дав больше обзора движения цены.
         scaleMargins: {
             top: isMobile ? 0.2 : 0.1, 
             bottom: isMobile ? 0.2 : 0.1,
@@ -66,11 +51,10 @@ export default function Chart({ candles, positions = [], history = [] }) {
       timeScale: {
         borderVisible: false,
         timeVisible: true,
-        rightOffset: isMobile ? 2 : 10, // Меньше отступ справа на моб
-        // ВАЖНО: barSpacing отвечает за ширину свечи. 
-        // 6 - стандарт, 3 - узкие свечи для мобилки (влезет больше истории)
+        rightOffset: isMobile ? 2 : 10,
         barSpacing: isMobile ? 3 : 6,
         minBarSpacing: 2,
+        fixLeftEdge: true, // Фикс левого края
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
       handleScale : { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
@@ -91,16 +75,24 @@ export default function Chart({ candles, positions = [], history = [] }) {
     chartRef.current  = chart;
     seriesRef.current = series;
 
-    window.addEventListener('resize', resizeChart);
-    resizeChart();
+    // --- ИСПОЛЬЗУЕМ ResizeObserver ---
+    // Это решает проблему пропавшей шкалы времени.
+    // График будет точно подгоняться под размер родительского div'а.
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (entries.length === 0 || !entries[0].target) return;
+      const { width, height } = entries[0].contentRect;
+      chart.resize(width, height);
+    });
+
+    resizeObserver.observe(el);
 
     return () => {
-      window.removeEventListener('resize', resizeChart);
+      resizeObserver.disconnect();
       chart.remove();
     };
   }, []);
 
-  // --- Данные свечей ---
+  // --- Логика обновления данных (Исправлена кнопка Load) ---
   useEffect(() => {
     const chart  = chartRef.current;
     const series = seriesRef.current;
@@ -114,29 +106,37 @@ export default function Chart({ candles, positions = [], history = [] }) {
       close: c.close,
     }));
 
-    if (!fitDone.current || data.length < prevLen.current) {
+    // Определяем, новые это данные или обновление текущих
+    const currentStartTime = data.length > 0 ? data[0].time : null;
+    
+    // Если время первой свечи изменилось - значит загрузили новый тикер или таймфрейм
+    // ИЛИ если это самый первый рендер (!fitDone.current)
+    const isNewDataSet = currentStartTime !== firstCandleTime.current || !fitDone.current;
+
+    if (isNewDataSet) {
+      // Полная перезапись данных
       series.setData(data);
       chart.timeScale().fitContent();
+      
       fitDone.current = true;
-      resizeChart();
+      firstCandleTime.current = currentStartTime;
+      
     } else {
+      // Просто обновление последней свечи (Live цена)
       const last = data[data.length - 1];
       series.update(last);
     }
     
-    prevLen.current = data.length;
-
     if (userAtEnd.current) {
       chart.timeScale().scrollToRealTime();
     }
   }, [candles]);
 
-  // --- ЛИНИИ (Только для Активной Позиции) ---
+  // --- ЛИНИИ (Positions) ---
   useEffect(() => {
     const series = seriesRef.current;
     if (!series || candles.length === 0) return;
 
-    // 1. Очистка старых линий
     priceLines.current.forEach(l => { try { series.removePriceLine(l); } catch {} });
     priceLines.current = [];
 
@@ -145,7 +145,7 @@ export default function Chart({ candles, positions = [], history = [] }) {
       const line = series.createPriceLine({
         price,
         color,
-        lineWidth: 1, // Тонкие линии
+        lineWidth: 1,
         lineStyle: style,
         axisLabelVisible: true,
         title: title || '',
@@ -153,53 +153,35 @@ export default function Chart({ candles, positions = [], history = [] }) {
       priceLines.current.push(line);
     };
 
-    // Рисуем линии только для positions (Active)
     positions.forEach(p => {
       if (!p.visible) return;
-      // Entry
       addLine(p.entryPx, '#2962ff', `Entry`, LineStyle.Solid); 
-      // SL
       addLine(p.sl, '#ef5350', `SL`);
-      // TP
       addLine(p.tp, '#26a69a', `TP`);
     });
+  }, [positions, candles]);
 
-    // ПРИМЕЧАНИЕ: Для history мы здесь ничего не рисуем (линий нет)
-
-  }, [positions, candles]); // Зависит от positions
-
-  // --- МАРКЕРЫ (Активная + История) ---
+  // --- МАРКЕРЫ (History) ---
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
     
-    // Сбрасываем маркеры
     series.setMarkers([]);
-
     if (candles.length === 0) return;
 
     const candleTimes = candles.map(c => c.time);
     const markers = [];
 
-    // Хелпер для поиска ближайшей свечи
     const findClosestTime = (targetTs) => {
       if (!targetTs) return null;
       const ts = Math.floor(targetTs);
-      
-      // Если время далеко за пределами диапазона свечей — игнорируем
-      // Берем запас например в (интервал * 2)
-      // Для простоты: проверяем, попадает ли в диапазон мин/макс времени свечей
       const minTime = candleTimes[0];
-      const maxTime = candleTimes[candleTimes.length - 1];
       
-      // Если сделка была сильно раньше первой свечи, не рисуем
       if (ts < minTime) return null; 
       
-      // Ищем ближайшую
       let closest = minTime;
       let minDiff = Math.abs(ts - minTime);
 
-      // Простая итерация (можно оптимизировать бинарным, но для 1000 свечей и так быстро)
       for (let i = 1; i < candleTimes.length; i++) {
         const diff = Math.abs(ts - candleTimes[i]);
         if (diff < minDiff) {
@@ -210,63 +192,41 @@ export default function Chart({ candles, positions = [], history = [] }) {
       return closest;
     };
 
-    // 1. Маркеры для АКТИВНОЙ позиции (Entry)
-    positions.forEach(p => {
-      const t = findClosestTime(p.openTime);
-      if (t) {
-        // markers.push({
-        //   time: t,
-        //   position: 'aboveBar',
-        //   color: '#f1c40f', // Желтый для активной
-        //   shape: 'arrowDown',
-        //   text: 'Entry',
-        //   size: 1,
-        // });
-      }
-    });
-
-    // 2. Маркеры для ИСТОРИИ (Entry + Close)
+    // Маркеры истории
     if (history && history.length > 0) {
       history.forEach(h => {
-        // --- Entry Marker (History) ---
         const tOpen = findClosestTime(h.timestamp_open);
         if (tOpen) {
           const entryColor = h.side === 2 ? '#e74c3c' : '#3a7afe';
           markers.push({
             time: tOpen,
             position: 'aboveBar',
-            color: entryColor, // Серый для истории
+            color: entryColor,
             shape: 'arrowDown',
-            // Можно добавить text: 'E', если нужно, или оставить пустым
             text: 'E',
-            size: 0.8, // Поменьше
+            size: 0.8,
           });
         }
 
-        // --- Close Marker (History) ---
         const tClose = findClosestTime(h.close_time);
         if (tClose) {
-          // Форматируем профит
           const profitVal = parseFloat(h.profit || 0);
           const profitStr = profitVal > 0 ? `+${profitVal.toFixed(2)}` : `${profitVal.toFixed(2)}`;
-          // Цвет в зависимости от профита (зеленоватый или красноватый) или просто фиолетовый
           const pColor = profitVal >= 0 ? '#2ecc71' : '#e74c3c';
 
           markers.push({
             time: tClose,
-            position: 'aboveBar', // Над свечей
-            color: '#9b59b6',    // Фиолетовая стрелка
+            position: 'aboveBar',
+            color: '#9b59b6',
             shape: 'arrowDown',
-            text: profitStr,     // Текст профита
+            text: profitStr,
             size: 0.8,
           });
         }
       });
     }
 
-    // ВАЖНО: Маркеры должны быть отсортированы по времени
     markers.sort((a, b) => a.time - b.time);
-
     if (markers.length) series.setMarkers(markers);
 
   }, [positions, candles, history]);
