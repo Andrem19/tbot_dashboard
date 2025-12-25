@@ -41,23 +41,40 @@ export default function Chart({ candles, positions = [], history = [] }) {
     el.style.height = '100%';
 
     const chart = createChart(el, {
-      layout: { background: { color: '#0f0f0f' }, textColor: '#d1d4dc' },
-      grid:   { vertLines: { color: '#1f1f1f' }, horzLines: { color: '#1f1f1f' } },
-      crosshair: { mode: CrosshairMode.Normal },
+      layout: { 
+          background: { color: '#131722' }, // var(--bg-main)
+          textColor: '#787b86'              // var(--text-secondary)
+      },
+      grid: { 
+          vertLines: { color: '#1e222d' },  // var(--bg-panel) - еле заметная сетка
+          horzLines: { color: '#1e222d' } 
+      },
+      crosshair: { 
+          mode: CrosshairMode.Normal,
+          vertLine: {
+            color: '#758696',
+            labelBackgroundColor: '#758696',
+          },
+          horzLine: {
+            color: '#758696',
+            labelBackgroundColor: '#758696',
+          },
+      },
       rightPriceScale: { borderVisible: false },
       timeScale: {
         borderVisible: false,
-        timeVisible  : true,
-        rightOffset  : 10,
-        barSpacing   : 6,
+        timeVisible: true,
+        rightOffset: 10,
+        barSpacing: 6,
       },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true },
-      handleScale : { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+      // ... handleScroll и прочее ...
     });
 
     const series = chart.addCandlestickSeries({
-      upColor: '#26a69a', downColor: '#ef5350',
-      wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+      upColor: '#26a69a',         // var(--green)
+      downColor: '#ef5350',       // var(--red)
+      wickUpColor: '#26a69a',
+      wickDownColor: '#ef5350',
       borderVisible: false,
       priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
     });
@@ -136,11 +153,11 @@ export default function Chart({ candles, positions = [], history = [] }) {
     positions.forEach(p => {
       if (!p.visible) return;
       // Entry
-      addLine(p.entryPx, '#3a7afe', `Entry`, LineStyle.Solid); 
+      addLine(p.entryPx, '#2962ff', `Entry`, LineStyle.Solid); 
       // SL
-      addLine(p.sl, '#e74c3c', `SL`);
+      addLine(p.sl, '#ef5350', `SL`);
       // TP
-      addLine(p.tp, '#2ecc71', `TP`);
+      addLine(p.tp, '#26a69a', `TP`);
     });
 
     // ПРИМЕЧАНИЕ: Для history мы здесь ничего не рисуем (линий нет)

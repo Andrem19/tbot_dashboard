@@ -83,49 +83,50 @@ export default function App() {
     reconnect: () => {},
   });
 
-  return (
+return (
     <div className="app-container">
-      {/* Верхняя панель настроек */}
+      {/* 1. Верхняя панель */}
       <form className="form-row" onSubmit={onSubmit}>
         <label>Coin <input name="coin" value={form.coin} onChange={onChange} /></label>
         <label>Candles <input type="number" name="number_candles" value={form.number_candles} onChange={onChange} /></label>
         <label>Interval (m) <input type="number" name="interv" value={form.interv} onChange={onChange} /></label>
         <button type="submit">Load</button>
         
+        {/* PnL выносим, стиль цвета задаем инлайн только для динамики цвета, остальное в CSS */}
         {currentPnl != null && (
-           <div className="header-pnl" style={{ marginLeft: 'auto', color: currentPnl >= 0 ? '#2ecc71' : '#e74c3c' }}>
-             Active PnL: {currentPnl.toFixed(4)}
+           <div className="header-pnl" style={{ color: currentPnl >= 0 ? 'var(--green)' : 'var(--red)' }}>
+             <span>PnL:</span>
+             <span>{currentPnl.toFixed(4)}</span>
            </div>
         )}
       </form>
 
-      {/* --- УБРАЛИ ReportStrip ОТСЮДА --- */}
-
+      {/* 2. Основной контент: Табы и График */}
       <div className="main-content">
         <ChartTabs
           coins={[settings.coin]}
           number_candles={settings.number_candles}
           interv={settings.interv}
           positionsByCoin={positionsByCoin}
-          history={historyData} // <--- ПЕРЕДАЛИ ИСТОРИЮ
+          history={historyData}
           onStatusChange={setChartStatus}
         />
       </div>
 
-      {/* --- ПОСТАВИЛИ ReportStrip СЮДА --- */}
+      {/* 3. Информационная строка */}
       <ReportStrip report={reportData} />
 
-      {/* Тепловая карта */}
+      {/* 4. Тепловая карта */}
       <HistoryHeatmap history={historyData} />
 
-      {/* Статус бар */}
+      {/* 5. Статус бар */}
       <div className="status-bar">
-        <span>WS: {chartStatus.wsConnected ? 'Connected' : 'Disconnected'}</span>
-        <span>DB: {dbConnected ? 'Connected' : 'Disc.'}</span>
-        {chartStatus.wsConnected ? (
-             <span className="ws-ok">●</span>
-        ) : (
-            <button onClick={() => chartStatus.reconnect?.()}>↻ Reconnect WS</button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+            <span>WS: {chartStatus.wsConnected ? <span style={{color:'var(--green)'}}>Connected</span> : 'Disconnected'}</span>
+            <span>DB: {dbConnected ? <span style={{color:'var(--green)'}}>ON</span> : 'OFF'}</span>
+        </div>
+        {!chartStatus.wsConnected && (
+             <button onClick={() => chartStatus.reconnect?.()}>↻ Reconnect WS</button>
         )}
       </div>
     </div>

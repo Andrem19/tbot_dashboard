@@ -1,378 +1,311 @@
-/* === Палитра и базовые переменные === */
-:root{
-  --bg: #0f0f0f;
-  --panel: #161616;
-  --panel-2: #181818;
-  --border: #2a2a2a;
-  --text: #f1f1f1;
-  --muted: #a8a8a8;
-  --accent: #3a7afe;
-  --accent-2: #6a5acd;
+/* === Палитра (TradingView Dark Style) === */
+:root {
+  --bg-main: #131722;       /* Основной фон (глубокий темный) */
+  --bg-panel: #1e222d;      /* Панели */
+  --bg-input: #2a2e39;      /* Инпуты */
+  --bg-hover: #363a45;      /* Ховер эффекты */
+  
+  --border: #363c4e;        /* Тонкие границы */
+  
+  --text-primary: #d1d4dc;  /* Основной текст */
+  --text-secondary: #787b86;/* Вторичный текст (лейблы) */
+  
+  --accent: #2962ff;        /* Акцентный синий */
+  --accent-hover: #1e53e5;
+  
+  --green: #26a69a;         /* Рост / Профит */
+  --red: #ef5350;           /* Падение / Убыток */
+  
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  
+  --font-mono: "Roboto Mono", "Menlo", "Consolas", monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif;
 }
 
-/* === Базовая типографика и сброс === */
+/* === Базовая типографика === */
 html, body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  -webkit-tap-highlight-color: transparent;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
-* { box-sizing: border-box; }
-a { color: #61dafb; }
+
+/* Красивый скроллбар */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-main); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+* { box-sizing: border-box; outline: none; }
 
 /* === Контейнер приложения === */
 .app-container {
-  width: 100%;
-  min-height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  touch-action: pan-x pan-y;
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* На весь экран */
+  max-height: 100vh;
+  overflow: hidden; /* Скроллим только контент */
 }
 
-/* === Верхняя форма === */
+/* === Шапка с формой === */
 .form-row {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(120px, 1fr));
-  gap: 10px;
-  padding: 10px 14px;
-  background: var(--panel-2);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--bg-panel);
   border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
 }
+
 .form-row label {
   display: flex;
   flex-direction: column;
-  font-size: 12px;
-  gap: 6px;
-  min-width: 0;
-  color: var(--muted);
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
-.form-row input,
-.form-row select {
-  padding: 8px 10px;
+
+.form-row input, .form-row select {
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: var(--bg-main);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #202020;
-  color: var(--text);
-  font-size: 14px;
-  outline: none;
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  transition: border-color 0.2s;
 }
-.form-row input:focus,
-.form-row select:focus {
-  border-color: #3a3a3a;
-  box-shadow: 0 0 0 2px rgba(58,122,254,0.15);
-}
-.form-row label.checkbox {
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  justify-content: flex-start;
-}
+
+.form-row input:focus { border-color: var(--accent); }
+
 .form-row button {
-  padding: 10px 12px;
-  border: 1px solid #2b2b2b;
-  border-radius: 6px;
-  background: linear-gradient(180deg, var(--accent), #2b62e6);
+  margin-top: auto; /* Выравнивание с инпутами */
+  padding: 6px 16px;
+  height: 30px;
+  background: var(--accent);
   color: #fff;
-  font-weight: 700;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  transition: transform .06s ease, filter .2s ease;
+  transition: background 0.2s;
 }
-.form-row button:active { transform: translateY(1px); }
-.form-row button:hover { filter: brightness(1.05); }
+.form-row button:hover { background: var(--accent-hover); }
 
-/* === Основной блок: график + правая панель === */
-.main-content{
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
-  column-gap: 14px;
-  align-items: start;
-  width: 100%;
+/* PnL в шапке */
+.header-pnl {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-/* Контейнер вкладок/графика */
-.chart-tabs-root{
-  min-width: 0;
-}
-
-/* Обёртка и контейнер графика */
-.chart-wrapper{
-  width: 100%;
-  height: auto;
-  min-height: 60vh;
-  background: #121212;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+/* === Основной контент (График + Табы) === */
+.main-content {
+  flex: 1; /* Занимает всё доступное место */
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset, 0 10px 30px rgba(0,0,0,0.35);
+  position: relative;
+  background: var(--bg-main);
 }
+
+.chart-tabs-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chart-tabs-header {
+  display: flex;
+  background: var(--bg-panel);
+  padding: 0 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.chart-tabs-header .tab {
+  padding: 8px 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s;
+}
+
+.chart-tabs-header .tab:hover { color: var(--text-primary); }
+.chart-tabs-header .tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.chart-wrapper {
+  flex: 1;
+  position: relative;
+  background: var(--bg-main);
+}
+
 .chart-container {
   width: 100%;
   height: 100%;
 }
 
-/* Вкладки графиков */
-.chart-tabs-header {
-  display: flex;
-  gap: 6px;
-  padding: 8px 10px 0 10px;
-  background: transparent;
-}
-.chart-tabs-header .tab {
-  padding: 6px 12px;
-  background: #202020;
-  border: 1px solid var(--border);
-  border-bottom: none;
-  cursor: pointer;
-  font-size: 12px;
-  color: #d0d0d0;
-  border-radius: 8px 8px 0 0;
-  transition: background .2s ease, color .2s ease, border-color .2s ease;
-}
-.chart-tabs-header .tab:hover { background: #242424; }
-.chart-tabs-header .tab.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: #2554d6;
-}
-
-/* Правая панель (статистика) */
-.stats-panel{
-  position: sticky;
-  top: 8px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-}
-.stats-title {
-  margin: 0 0 10px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #ddd;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.pos-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.stats-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 0;
-  border-top: 1px solid var(--border);
-  color: #ddd;
-}
-.stats-row.total { font-weight: 600; }
-.overall-row { margin-top: 10px; }
-
-/* Эффект вспышки чисел */
-.flash-val {
-  transition: transform 0.4s ease, background 0.4s ease;
-  padding: 0 4px;
-  border-radius: 4px;
-}
-.flash-val.flash { transform: scale(1.12); }
-.flash-val.up   { background: rgba(0, 200, 0, 0.15); }
-.flash-val.down { background: rgba(220, 0, 0, 0.15); }
-
-/* Таблица в StatsPanel */
-.stats-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-}
-.stats-table th,
-.stats-table td { padding: 6px 8px; }
-.stats-table thead th {
-  background: #1e1e1e;
-  color: #cfcfcf;
-  border-bottom: 1px solid var(--border);
-}
-.stats-table .metric-cell { text-align: left; color: #ccc; }
-.stats-table .data-cell   { text-align: right; }
-
-/* === Прогресс-бары === */
-.progress-wrapper {
-  padding: 10px 12px;
-  background: var(--panel-2);
-  border-top: 1px solid var(--border);
-}
-.progress-label {
-  font-size: 12px;
-  margin-bottom: 6px;
-  color: #cfcfcf;
-}
-.progress-bar {
-  width: 100%;
-  height: 8px;
-  background: #2a2a2a;
-  border-radius: 5px;
-  overflow: hidden;
-  position: relative;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
-}
-.progress-fill-absolute {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent-2), #8a2be2);
-  transition: width 0.35s ease;
-  opacity: 0.9;
-}
-
-/* === Опционная/симуляционная таблица === */
-.option-table-wrapper {
-  padding: 10px 12px;
-  background: var(--panel-2);
-  border-top: 1px solid var(--border);
-}
-.option-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.option-table thead th {
-  background: #1f1f1f;
-  color: #dcdcdc;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-}
-.option-table td {
-  padding: 6px 10px;
-  border-bottom: 1px solid #222;
-  color: #ddd;
-}
-.option-table tr:nth-child(even) td { background: #141414; }
-.option-table td:first-child {
-  color: #9a9a9a;
-  width: 160px;
-}
-
-/* === Строка статуса (поверх любых слоёв графика) === */
-.status-bar {
-  padding: 8px 12px;
-  font-size: 12px;
-  background: var(--panel-2);
-  border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-  position: relative;
-  z-index: 5; /* гарантируем кликабельность кнопки перезапуска */
-}
-
-/* === Мобильная верстка === */
-@media (max-width: 1024px) {
-  .chart-wrapper { min-height: 48vh; }
-}
-@media (max-width: 768px) {
-  .form-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    padding: 8px 10px;
-  }
-  .form-row input,
-  .form-row select { padding: 6px 8px; font-size: 13px; }
-  .form-row button { grid-column: 1 / -1; padding: 10px 0; }
-
-  .main-content { display: block; }
-
-  .stats-panel { position: relative; top: 0; margin-top: 10px; }
-  .option-table-wrapper { margin-top: 8px; }
-
-  .chart-wrapper{ min-height: 320px; border-radius: 8px; }
-}
-
-
-/* === Report Strip === */
+/* === Инфо-полоса (ReportStrip) === */
 .report-strip {
+  flex-shrink: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 4px 10px; /* Меньше отступы */
-  background: #1a1a1a;
+  gap: 16px;
+  padding: 6px 16px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  font-size: 10px;   /* Очень мелкий шрифт */
-  font-family: monospace;
-  justify-content: center; /* Центрируем, чтобы красивее смотрелось под графиком */
+  overflow-x: auto; /* Скролл если не влезает */
+  white-space: nowrap;
 }
+
 .report-item {
   display: flex;
-  gap: 4px;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  font-family: var(--font-mono);
 }
-.report-key { color: #888; }
-.report-value { color: #cecece; font-weight: 600; }
+.report-key { color: var(--text-secondary); }
+.report-value { color: var(--text-primary); font-weight: 600; font-feature-settings: "tnum"; }
 
-/* === Header PnL === */
-.header-pnl {
-  font-weight: bold;
-  font-size: 14px;
-  padding: 8px 12px;
-  background: rgba(0,0,0,0.2);
-  border-radius: 4px;
-}
-
-/* === Heatmap Styles === */
+/* === Heatmap (Тепловая карта) === */
 .heatmap-container {
-  margin-top: 10px;
-  padding: 10px;
-  background: var(--panel-2);
-  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  max-height: 25vh; /* Ограничим высоту, чтобы график был главным */
+  overflow-y: auto;
 }
+
 .panel-title {
-  margin: 0 0 10px 0;
-  font-size: 14px;
-  color: #ccc;
-  font-weight: normal;
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
 }
+
 .heatmap-grid {
   display: grid;
-  /* 5 колонок для будних дней */
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); /* Адаптивная сетка */
   gap: 4px;
 }
+
 .heatmap-cell {
-  height: 60px; /* Высота ячейки */
-  border-radius: 4px;
+  height: 50px;
+  border-radius: 3px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-weight: bold;
-  font-size: 14px;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-  transition: transform 0.1s;
+  font-family: var(--font-mono);
+  font-size: 11px;
   cursor: default;
+  transition: transform 0.1s, box-shadow 0.1s;
+  position: relative;
+  overflow: hidden;
 }
+
 .heatmap-cell:hover {
-  transform: scale(1.02);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
   z-index: 2;
-  box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
-.hm-signal {
-  font-size: 18px;
+
+.hm-signal { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+.hm-profit { font-size: 10px; opacity: 0.9; }
+
+.heatmap-empty { padding: 10px; text-align: center; color: var(--text-secondary); font-size: 12px; }
+
+/* === Статус бар === */
+.status-bar {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  background: #151820; /* Чуть темнее панели */
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-secondary);
 }
-.hm-profit {
+.status-bar button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 2px 8px;
+  border-radius: 2px;
   font-size: 10px;
-  opacity: 0.9;
-  font-weight: normal;
+  cursor: pointer;
 }
-.heatmap-empty {
-  padding: 20px;
-  text-align: center;
-  color: #666;
+.ws-ok { color: var(--green); margin-left: 6px; }
+
+/* === МОБИЛЬНАЯ ВЕРСИЯ === */
+@media (max-width: 768px) {
+  .app-container {
+    height: 100vh; /* Фиксируем высоту для мобильных браузеров */
+  }
+
+  .form-row {
+    padding: 8px 10px;
+    gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto; /* Сетка для инпутов */
+  }
+  
+  .form-row label { font-size: 10px; }
+  .form-row input { padding: 4px 6px; font-size: 12px; }
+  
+  .form-row button {
+    grid-column: span 4;
+    width: 100%;
+    margin-top: 4px;
+  }
+  
+  .header-pnl {
+    grid-column: span 4;
+    justify-content: center;
+    margin: 4px 0 0 0;
+    width: 100%;
+    background: rgba(255,255,255,0.03);
+  }
+
+  /* На мобильном график главный, остальное под ним */
+  .heatmap-grid {
+    grid-template-columns: repeat(5, 1fr); /* 5 дней в ряд */
+  }
+  
+  .heatmap-cell { height: 40px; }
+  
+  .report-strip {
+    padding: 8px 10px;
+    gap: 12px;
+    /* На мобильном можно сделать грид 2 колонки */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    white-space: normal;
+  }
 }

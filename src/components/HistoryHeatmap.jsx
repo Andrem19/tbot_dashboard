@@ -5,19 +5,21 @@ import React, { useMemo } from 'react';
  * Градиент: Темно-красный (отрицательный) -> Серый (0) -> Темно-зеленый (положительный).
  */
 function getColor(profit, minP, maxP) {
-  if (profit === 0) return '#333'; // Нейтральный
-
-  // Нормализуем значение от 0 до 1 относительно максимума/минимума
+  if (profit === 0) return '#2a2e39'; // Нейтральный цвет (как фон инпутов)
+  
+  // Используем прозрачность для градации, чтобы цвета были в стиле темы
   if (profit > 0) {
+    // Зеленый: #26a69a
     const ratio = maxP > 0 ? Math.min(1, profit / maxP) : 0;
-    // Зеленый канал от 50 до 200
-    const g = Math.floor(50 + 150 * ratio);
-    return `rgb(0, ${g}, 0)`;
+    // От темного к яркому зеленому. 
+    // Минимум 20% прозрачности, максимум 100%
+    const opacity = 0.2 + (0.8 * ratio);
+    return `rgba(38, 166, 154, ${opacity})`; 
   } else {
+    // Красный: #ef5350
     const ratio = minP < 0 ? Math.min(1, profit / minP) : 0;
-    // Красный канал от 50 до 200
-    const r = Math.floor(50 + 150 * ratio);
-    return `rgb(${r}, 0, 0)`;
+    const opacity = 0.2 + (0.8 * ratio);
+    return `rgba(239, 83, 80, ${opacity})`;
   }
 }
 
