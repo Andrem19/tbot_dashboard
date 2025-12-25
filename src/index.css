@@ -116,10 +116,11 @@ html, body, #root {
 
 /* === Основной контент (График + Табы) === */
 .main-content {
-  flex: 1; /* Занимает всё доступное место */
-  display: flex;
+  flex: 1;                 /* Занимает всё свободное место */
+  display: flex;           /* Включаем флекс внутри */
   flex-direction: column;
-  overflow: hidden;
+  min-height: 0;           /* <--- КРИТИЧЕСКИ ВАЖНО: запрещает вылезать за пределы родителя */
+  overflow: hidden;        /* Обрезаем всё лишнее */
   position: relative;
   background: var(--bg-main);
 }
@@ -127,7 +128,8 @@ html, body, #root {
 .chart-tabs-root {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 100%;            /* Растягиваем на всю высоту main-content */
+  min-height: 0;           /* Страховка от переполнения */
 }
 
 .chart-tabs-header {
@@ -156,9 +158,13 @@ html, body, #root {
 }
 
 .chart-wrapper {
-  flex: 1;
+  flex: 1;                 /* Растягиваемся на доступное пространство */
+  height: 100%;            /* Принудительно 100% высоты родителя */
+  width: 100%;
   position: relative;
+  overflow: hidden;        /* Если график вылезет - обрезаем */
   background: var(--bg-main);
+  border-radius: 4px;      /* Скруглим углы */
 }
 
 .chart-container {

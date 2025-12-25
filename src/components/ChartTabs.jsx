@@ -87,23 +87,27 @@ export default function ChartTabs({
       {/* контейнер с графиками */}
       <div
         style={{
-          flex: '1 1 0',
+          flex: '1 1 0',      // Растягиваемся
           position: 'relative',
-          minHeight: 0, // разрешаем flex-сжатие
+          minHeight: 0,       // Важно для Firefox и мобильных
+          display: 'flex',    // Делаем этот контейнер тоже флексом
+          flexDirection: 'column',
+          height: '100%',     // Явная высота
         }}
       >
         {coins.map((c) => (
           <div
             key={c}
             style={{
-              position: c === active ? 'relative' : 'absolute',
+              position: c === active ? 'relative' : 'absolute', // relative для активного
               inset: 0,
               visibility: c === active ? 'visible' : 'hidden',
-              display: 'flex',
+              display: c === active ? 'flex' : 'none',          // Скрываем из потока неактивные
               flex: '1 1 0',
               flexDirection: 'column',
-              height: '100%',
+              height: '100%',     // <--- ВАЖНО: передаем высоту дальше в ChartWithData
               width: '100%',
+              overflow: 'hidden', // Обрезаем лишнее
             }}
           >
             <ChartWithData
@@ -111,7 +115,7 @@ export default function ChartTabs({
               number_candles={number_candles}
               interv={interv}
               positions={positionsByCoin[c] || []}
-              history={history} // <--- Передаем дальше
+              history={history}
               reportStatus={handleReport}
             />
           </div>
