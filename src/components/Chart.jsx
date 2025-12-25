@@ -147,7 +147,7 @@ export default function Chart({ candles, positions = [], history = [] }) {
     }
   }, [candles]);
 
-  // --- Линии позиций ---
+// --- Линии позиций ---
   useEffect(() => {
     const series = seriesRef.current;
     if (!series || candles.length === 0) return;
@@ -155,7 +155,8 @@ export default function Chart({ candles, positions = [], history = [] }) {
     priceLines.current.forEach(l => { try { series.removePriceLine(l); } catch {} });
     priceLines.current = [];
 
-    const addLine = (price, color, style = LineStyle.Dashed) => {
+    // Вернули параметр title
+    const addLine = (price, color, title, style = LineStyle.Dashed) => {
       if (!Number.isFinite(price)) return;
       const line = series.createPriceLine({
         price,
@@ -163,18 +164,17 @@ export default function Chart({ candles, positions = [], history = [] }) {
         lineWidth: 1,
         lineStyle: style,
         axisLabelVisible: true,
-        // === ИСПРАВЛЕНИЕ ЗДЕСЬ ===
-        // Мы полностью убрали свойство "title".
-        // Если его нет, библиотека рисует только чистую цену без тире.
+        title: title, // Теперь текст будет отображаться (например, "TP: 82000")
       });
       priceLines.current.push(line);
     };
 
     positions.forEach(p => {
       if (!p.visible) return;
-      addLine(p.entryPx, '#2962ff', LineStyle.Solid); 
-      addLine(p.sl, '#ef5350');
-      addLine(p.tp, '#26a69a');
+      // Передаем названия обратно
+      addLine(p.entryPx, '#2962ff', 'Entry', LineStyle.Solid); 
+      addLine(p.sl, '#ef5350', 'SL');
+      addLine(p.tp, '#26a69a', 'TP');
     });
   }, [positions, candles]);
 
