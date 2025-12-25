@@ -10,10 +10,8 @@ export default function Chart({ candles, positions = [], history = [] }) {
   const fitDone         = useRef(false);
   const priceLines      = useRef([]);
   
-  // Ref для доступа к актуальным позициям внутри autoscaleInfoProvider (который создается один раз)
   const positionsRef = useRef(positions);
 
-  // Обновляем ref при изменении пропса positions
   useEffect(() => {
     positionsRef.current = positions;
   }, [positions]);
@@ -79,21 +77,17 @@ export default function Chart({ candles, positions = [], history = [] }) {
       borderVisible: false,
       priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
       
-      // === РЕШЕНИЕ ПРОБЛЕМЫ 2: Умный авто-масштаб ===
-      // Эта функция заставляет график учитывать цены TP и SL при расчете границ экрана
+      // Умный авто-масштаб (учитывает TP/SL)
       autoscaleInfoProvider: (original) => {
         const res = original();
         const currentPositions = positionsRef.current || [];
         
-        // Если есть свечи и есть активные позиции
         if (res.priceRange !== null && currentPositions.length > 0) {
            let min = res.priceRange.minValue;
            let max = res.priceRange.maxValue;
 
-           // Пробегаемся по позициям и расширяем границы min/max
            currentPositions.forEach(p => {
              if (!p.visible) return;
-             // Собираем все цены (Entry, SL, TP), которые являются числами
              const vals = [p.entryPx, p.sl, p.tp].filter(v => Number.isFinite(v));
              vals.forEach(v => {
                if (v < min) min = v;
@@ -161,10 +155,6 @@ export default function Chart({ candles, positions = [], history = [] }) {
     priceLines.current.forEach(l => { try { series.removePriceLine(l); } catch {} });
     priceLines.current = [];
 
-    // === РЕШЕНИЕ ПРОБЛЕМЫ 1: Убрали title ===
-    // Убрали параметр title из createPriceLine.
-    // Теперь на оси будет только чистое число (цена), без текста и тире.
-    // Цвета (Entry=Синий, SL=Красный, TP=Зеленый) остаются.
     const addLine = (price, color, style = LineStyle.Dashed) => {
       if (!Number.isFinite(price)) return;
       const line = series.createPriceLine({
@@ -173,7 +163,9 @@ export default function Chart({ candles, positions = [], history = [] }) {
         lineWidth: 1,
         lineStyle: style,
         axisLabelVisible: true,
-        title: '', // Пустая строка убирает текст и тире с метки оси
+        // === ИСПРАВЛЕНИЕ ЗДЕСЬ ===
+        // Мы полностью убрали свойство "title".
+        // Если его нет, библиотека рисует только чистую цену без тире.
       });
       priceLines.current.push(line);
     };
