@@ -193,14 +193,14 @@ export default function Chart({ candles, positions = [], history = [] }) {
     positions.forEach(p => {
       const t = findClosestTime(p.openTime);
       if (t) {
-        markers.push({
-          time: t,
-          position: 'aboveBar',
-          color: '#f1c40f', // Желтый для активной
-          shape: 'arrowDown',
-          text: 'Entry',
-          size: 1,
-        });
+        // markers.push({
+        //   time: t,
+        //   position: 'aboveBar',
+        //   color: '#f1c40f', // Желтый для активной
+        //   shape: 'arrowDown',
+        //   text: 'Entry',
+        //   size: 1,
+        // });
       }
     });
 
