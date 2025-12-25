@@ -32,29 +32,43 @@ export default function Chart({ candles, positions = [], history = [] }) {
       },
       crosshair: { mode: CrosshairMode.Normal },
       
-      // Настройка отступов (симметричные, чтобы цена была по центру)
+      // Настройка правой шкалы
       rightPriceScale: { 
         borderVisible: false,
+        // Оставляем отступы, чтобы цена была по центру
         scaleMargins: {
             top: isMobile ? 0.2 : 0.1, 
             bottom: isMobile ? 0.2 : 0.1,
-        }
+        },
+        // Разрешаем авто-масштаб, но он отключится, если пользователь начнет скроллить
+        autoScale: true,
+        // Включаем отображение тиков, чтобы шкала не казалась пустой
+        ticksVisible: true, 
       },
       
       timeScale: {
         borderVisible: false,
         timeVisible: true,
-        rightOffset: 0, // Без отступа справа (прижимаем к краю)
-        barSpacing: isMobile ? 6 : 8, // Сделаем свечи чуть крупнее по умолчанию
+        rightOffset: 0,
+        barSpacing: isMobile ? 6 : 8,
         minBarSpacing: 2,
-        // ВАЖНО: Убрали fixLeftEdge и fixRightEdge.
-        // Теперь график свободно плавает, как в TradingView.
         fixLeftEdge: false, 
         fixRightEdge: false,
       },
-      // Разрешаем все виды прокрутки и зума
-      handleScroll: { mouseWheel: true, pressedMouseMove: true, vertTouchDrag: false },
-      handleScale : { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
+
+      // === ИСПРАВЛЕНИЕ ЗДЕСЬ ===
+      // Разрешаем все взаимодействия
+      handleScroll: { 
+          mouseWheel: true, 
+          pressedMouseMove: true, 
+          vertTouchDrag: true, // <--- ВАЖНО: Разрешаем двигать цену вверх/вниз пальцем
+          horzTouchDrag: true,
+      },
+      handleScale: { 
+          axisPressedMouseMove: true, // Разрешаем тянуть за шкалу цен
+          mouseWheel: true, 
+          pinch: true, // Разрешаем щипок двумя пальцами (зум)
+      },
     });
 
     const series = chart.addCandlestickSeries({
@@ -99,28 +113,19 @@ export default function Chart({ candles, positions = [], history = [] }) {
     const isNewDataSet = currentStartTime !== firstCandleTime.current || !fitDone.current;
 
     if (isNewDataSet) {
-      // 1. Заливаем данные
       series.setData(data);
-      
-      // 2. ИСПРАВЛЕНИЕ: Вместо fitContent() (показать всё) используем scrollToRealTime().
-      // Это сдвинет график в конец (к текущей цене), но сохранит масштаб (зум).
-      // Предыдущие свечи уйдут "за экран" влево, и к ним можно будет скроллить.
+      // Скроллим к реальному времени только при первой загрузке
       chart.timeScale().scrollToRealTime();
-      
       fitDone.current = true;
       firstCandleTime.current = currentStartTime;
-      
     } else {
-      // Обновление цены в реальном времени
       const last = data[data.length - 1];
       series.update(last);
-      
-      // Здесь НЕТ принудительного скролла. 
-      // Если вы отмотали назад, график останется там, где вы его оставили.
+      // Не вызываем scrollToRealTime(), чтобы не сбивать ручной скролл
     }
   }, [candles]);
 
-  // --- Линии (Positions) ---
+  // --- Линии позиций ---
   useEffect(() => {
     const series = seriesRef.current;
     if (!series || candles.length === 0) return;
@@ -149,7 +154,7 @@ export default function Chart({ candles, positions = [], history = [] }) {
     });
   }, [positions, candles]);
 
-  // --- Маркеры (History) ---
+  // --- Маркеры истории ---
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
