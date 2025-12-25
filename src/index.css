@@ -266,46 +266,58 @@ html, body, #root {
 /* === МОБИЛЬНАЯ ВЕРСИЯ === */
 @media (max-width: 768px) {
   .app-container {
-    height: 100vh; /* Фиксируем высоту для мобильных браузеров */
+    height: 100vh;
+    min-height: -webkit-fill-available; /* Фикс для Safari iOS */
   }
 
+  /* 1. Исправление шапки: делаем сетку 2x2 */
   .form-row {
-    padding: 8px 10px;
-    gap: 8px;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto; /* Сетка для инпутов */
+    grid-template-columns: 1fr 1fr; /* Две равные колонки */
+    gap: 8px;
+    padding: 8px 12px;
   }
   
-  .form-row label { font-size: 10px; }
-  .form-row input { padding: 4px 6px; font-size: 12px; }
-  
-  .form-row button {
-    grid-column: span 4;
+  .form-row label {
+    font-size: 11px;
     width: 100%;
-    margin-top: 4px;
+  }
+
+  /* Кнопка Load занимает всю ширину второй колонки или переносится */
+  .form-row button {
+    margin-top: auto;
+    width: 100%;
+    height: 32px; /* Чуть выше для пальца */
   }
   
   .header-pnl {
-    grid-column: span 4;
+    grid-column: 1 / -1; /* PnL на всю ширину снизу */
+    margin-top: 4px;
+    text-align: center;
     justify-content: center;
-    margin: 4px 0 0 0;
-    width: 100%;
-    background: rgba(255,255,255,0.03);
+    font-size: 12px;
   }
 
-  /* На мобильном график главный, остальное под ним */
+  /* 2. Heatmap на мобильном */
   .heatmap-grid {
-    grid-template-columns: repeat(5, 1fr); /* 5 дней в ряд */
+    grid-template-columns: repeat(5, 1fr); 
+  }
+  .heatmap-cell { 
+    height: 45px; 
+    font-size: 10px; /* Шрифт поменьше */
+  }
+
+  /* 3. Кнопка Refresh и статус бар */
+  .status-bar {
+    padding: 8px 12px; /* Больше отступов */
+    height: auto;
+    min-height: 44px; /* Минимальный размер для тача */
   }
   
-  .heatmap-cell { height: 40px; }
-  
-  .report-strip {
-    padding: 8px 10px;
-    gap: 12px;
-    /* На мобильном можно сделать грид 2 колонки */
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    white-space: normal;
+  .status-bar button {
+    padding: 8px 16px; /* Жирная кнопка для пальца */
+    font-size: 12px;
+    background: rgba(255,255,255,0.05); /* Легкий фон чтобы видеть границы */
+    border-color: var(--text-secondary);
   }
 }

@@ -37,51 +37,55 @@ export default function Chart({ candles, positions = [], history = [] }) {
     const el = containerRef.current;
     if (!el) return;
     
+    // Проверяем, мобильное ли устройство (ширина < 768px)
+    const isMobile = window.innerWidth < 768;
+
     el.style.width  = '100%';
     el.style.height = '100%';
 
     const chart = createChart(el, {
       layout: { 
-          background: { color: '#131722' }, // var(--bg-main)
-          textColor: '#787b86'              // var(--text-secondary)
+          background: { color: '#131722' }, 
+          textColor: '#787b86' 
       },
       grid: { 
-          vertLines: { color: '#1e222d' },  // var(--bg-panel) - еле заметная сетка
+          vertLines: { color: '#1e222d' }, 
           horzLines: { color: '#1e222d' } 
       },
-      crosshair: { 
-          mode: CrosshairMode.Normal,
-          vertLine: {
-            color: '#758696',
-            labelBackgroundColor: '#758696',
-          },
-          horzLine: {
-            color: '#758696',
-            labelBackgroundColor: '#758696',
-          },
+      crosshair: { mode: CrosshairMode.Normal },
+      rightPriceScale: { 
+        borderVisible: false,
+        // ВАЖНО: Увеличиваем отступы сверху и снизу (scaleMargins).
+        // 0.2 (20%) сверху и 0.2 снизу сожмут график визуально по вертикали,
+        // дав больше обзора движения цены.
+        scaleMargins: {
+            top: isMobile ? 0.2 : 0.1, 
+            bottom: isMobile ? 0.2 : 0.1,
+        }
       },
-      rightPriceScale: { borderVisible: false },
       timeScale: {
         borderVisible: false,
         timeVisible: true,
-        rightOffset: 10,
-        barSpacing: 6,
+        rightOffset: isMobile ? 2 : 10, // Меньше отступ справа на моб
+        // ВАЖНО: barSpacing отвечает за ширину свечи. 
+        // 6 - стандарт, 3 - узкие свечи для мобилки (влезет больше истории)
+        barSpacing: isMobile ? 3 : 6,
+        minBarSpacing: 2,
       },
-      // ... handleScroll и прочее ...
+      handleScroll: { mouseWheel: true, pressedMouseMove: true },
+      handleScale : { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
     });
 
     const series = chart.addCandlestickSeries({
-      upColor: '#26a69a',         // var(--green)
-      downColor: '#ef5350',       // var(--red)
-      wickUpColor: '#26a69a',
-      wickDownColor: '#ef5350',
+      upColor: '#26a69a', downColor: '#ef5350',
+      wickUpColor: '#26a69a', wickDownColor: '#ef5350',
       borderVisible: false,
       priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
     });
 
     chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
       const sp = chart.timeScale().scrollPosition();
-      userAtEnd.current = sp === 0 || sp < 0.5; 
+      userAtEnd.current = sp === 0 || sp < 0.5;
     });
 
     chartRef.current  = chart;

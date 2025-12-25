@@ -1,35 +1,23 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 
-/**
- * Получение цвета на основе профита.
- * Градиент: Темно-красный (отрицательный) -> Серый (0) -> Темно-зеленый (положительный).
- */
 function getColor(profit, minP, maxP) {
-  if (profit === 0) return '#2a2e39'; // Нейтральный цвет (как фон инпутов)
-  
-  // Используем прозрачность для градации, чтобы цвета были в стиле темы
+  if (profit === 0) return '#2a2e39';
   if (profit > 0) {
-    // Зеленый: #26a69a
     const ratio = maxP > 0 ? Math.min(1, profit / maxP) : 0;
-    // От темного к яркому зеленому. 
-    // Минимум 20% прозрачности, максимум 100%
-    const opacity = 0.2 + (0.8 * ratio);
-    return `rgba(38, 166, 154, ${opacity})`; 
+    const opacity = 0.3 + (0.7 * ratio); // Чуть ярче
+    return `rgba(38, 166, 154, ${opacity})`;
   } else {
-    // Красный: #ef5350
     const ratio = minP < 0 ? Math.min(1, profit / minP) : 0;
-    const opacity = 0.2 + (0.8 * ratio);
+    const opacity = 0.3 + (0.7 * ratio);
     return `rgba(239, 83, 80, ${opacity})`;
   }
 }
 
-/** Проверка, является ли день выходным (Суббота=6, Воскресенье=0) */
 function isWeekend(date) {
   const day = date.getDay();
   return day === 0 || day === 6;
 }
 
-/** Форматирование даты в YYYY-MM-DD для ключей карты */
 function formatDateKey(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -38,58 +26,52 @@ function formatDateKey(date) {
 }
 
 export default function HistoryHeatmap({ history = [] }) {
+  // Состояние для выбранной ячейки (для мобильных и ПК)
+  const [selectedCell, setSelectedCell] = useState(null);
+
   const { gridCells } = useMemo(() => {
     if (!history || history.length === 0) return { gridCells: [] };
-
-    // 1. Находим мин/макс профит для градиента
+    
     let minP = 0, maxP = 0;
     const historyMap = {};
-
+    
     history.forEach(item => {
       if (item.profit < minP) minP = item.profit;
       if (item.profit > maxP) maxP = item.profit;
-      
-      // Ключ по дате открытия сделки
       const date = new Date(item.timestamp_open * 1000);
       const key = formatDateKey(date);
-      // Если сделок несколько за день, берем последнюю или суммируем (в данном коде просто перезаписываем/берем последнюю)
       historyMap[key] = item;
     });
 
-    // 2. Генерируем календарную сетку
-    // Находим самую раннюю дату
     const timestamps = history.map(h => h.timestamp_open * 1000);
     const minTime = Math.min(...timestamps);
     const maxTime = Date.now();
-
+    
     const startDate = new Date(minTime);
     const endDate = new Date(maxTime);
-
+    
     const cells = [];
     const current = new Date(startDate);
-
-    // Сдвигаем current на начало недели (Понедельник), чтобы сетка была ровной
+    
+    // Выравниваем на понедельник, чтобы сетка была красивой
     const day = current.getDay();
-    const diff = current.getDate() - day + (day === 0 ? -6 : 1); 
+    const diff = current.getDate() - day + (day === 0 ? -6 : 1);
     current.setDate(diff);
 
     while (current <= endDate) {
       if (!isWeekend(current)) {
         const key = formatDateKey(current);
         const data = historyMap[key];
-        
         cells.push({
             dateStr: key,
             hasData: !!data,
-            side: data?.side,     // <--- СТАЛО
+            side: data?.side,
             profit: data?.profit,
-            color: data ? getColor(data.profit, minP, maxP) : '#222',
+            color: data ? getColor(data.profit, minP, maxP) : '#1e222d', // Цвет пустой ячейки под фон
         });
       }
-      // Следующий день
       current.setDate(current.getDate() + 1);
     }
-
     return { gridCells: cells };
   }, [history]);
 
@@ -97,23 +79,45 @@ export default function HistoryHeatmap({ history = [] }) {
 
   return (
     <div className="heatmap-container">
-      <h3 className="panel-title">Trading History Heatmap</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+         <h3 className="panel-title" style={{ margin: 0 }}>Trading History</h3>
+         {/* Отображаем детали выбранного дня здесь */}
+         {selectedCell && (
+             <div style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>
+                 {selectedCell.dateStr}: 
+                 <span style={{ 
+                     color: (selectedCell.profit || 0) >= 0 ? '#26a69a' : '#ef5350',
+                     marginLeft: '6px'
+                 }}>
+                    {selectedCell.profit ? selectedCell.profit.toFixed(2) : '0.00'} $
+                 </span>
+             </div>
+         )}
+      </div>
+
       <div className="heatmap-grid">
-        {gridCells.map((cell) => (
-          <div 
-            key={cell.dateStr} 
-            className="heatmap-cell"
-            style={{ backgroundColor: cell.color }}
-            title={`${cell.dateStr} | Profit: ${cell.profit ?? '-'}`}
-          >
-            {cell.hasData && (
-                <>
-                    <div className="hm-signal">{cell.side}</div>   {/* <--- СТАЛО */}
-                    <div className="hm-profit">{cell.profit?.toFixed(2)}</div>
-                </>
-            )}
-          </div>
-        ))}
+        {gridCells.map((cell) => {
+          const isSelected = selectedCell?.dateStr === cell.dateStr;
+          return (
+            <div
+              key={cell.dateStr}
+              className="heatmap-cell"
+              onClick={() => setSelectedCell(cell)} // Клик работает везде
+              style={{ 
+                  backgroundColor: cell.color,
+                  border: isSelected ? '2px solid #fff' : 'none', // Белая рамка при выборе
+                  transform: isSelected ? 'scale(0.95)' : 'none'
+              }}
+            >
+              {cell.hasData && (
+                  <>
+                      <div className="hm-signal">{cell.side}</div>
+                      <div className="hm-profit">{cell.profit?.toFixed(1)}</div>
+                  </>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
