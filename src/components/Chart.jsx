@@ -1,35 +1,27 @@
 import { useEffect, useRef } from 'react';
 import { createChart, CrosshairMode, LineStyle } from 'lightweight-charts';
 
-/**
- * props:
- * candles  – [{ time, open, high, low, close }]
- * positions – Активная позиция
- * history   – История сделок
- */
 export default function Chart({ candles, positions = [], history = [] }) {
   const containerRef = useRef(null);
   const chartRef     = useRef(null);
   const seriesRef    = useRef(null);
   
-  // Для отслеживания смены датасета
+  // Храним время первой свечи для определения полной перезагрузки данных
   const firstCandleTime = useRef(null); 
   const fitDone         = useRef(false);
-  const userAtEnd       = useRef(true);
   
   const priceLines      = useRef([]);
 
-  // --- Инициализация и Ресайз ---
+  // --- Инициализация графика ---
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     
     const isMobile = window.innerWidth < 768;
 
-    // Стили контейнера, чтобы он занимал все место
     el.style.width  = '100%';
     el.style.height = '100%';
-    el.style.overflow = 'hidden'; // Важно, чтобы не вылезало
+    el.style.overflow = 'hidden';
 
     const chart = createChart(el, {
       layout: { 
@@ -41,6 +33,8 @@ export default function Chart({ candles, positions = [], history = [] }) {
           horzLines: { color: '#1e222d' } 
       },
       crosshair: { mode: CrosshairMode.Normal },
+      
+      // Настройка отступов для мобильных (как обсуждали ранее)
       rightPriceScale: { 
         borderVisible: false,
         scaleMargins: {
@@ -48,13 +42,16 @@ export default function Chart({ candles, positions = [], history = [] }) {
             bottom: isMobile ? 0.2 : 0.1,
         }
       },
+      
       timeScale: {
         borderVisible: false,
         timeVisible: true,
-        rightOffset: isMobile ? 2 : 10,
+        // ИСПРАВЛЕНИЕ 2: Убираем отступ справа полностью
+        rightOffset: 0, 
         barSpacing: isMobile ? 3 : 6,
         minBarSpacing: 2,
-        fixLeftEdge: true, // Фикс левого края
+        fixLeftEdge: true,
+        fixRightEdge: true,
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
       handleScale : { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
@@ -67,17 +64,10 @@ export default function Chart({ candles, positions = [], history = [] }) {
       priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
     });
 
-    chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
-      const sp = chart.timeScale().scrollPosition();
-      userAtEnd.current = sp === 0 || sp < 0.5;
-    });
-
     chartRef.current  = chart;
     seriesRef.current = series;
 
-    // --- ИСПОЛЬЗУЕМ ResizeObserver ---
-    // Это решает проблему пропавшей шкалы времени.
-    // График будет точно подгоняться под размер родительского div'а.
+    // ResizeObserver для точной подгонки размера
     const resizeObserver = new ResizeObserver((entries) => {
       if (entries.length === 0 || !entries[0].target) return;
       const { width, height } = entries[0].contentRect;
@@ -92,7 +82,7 @@ export default function Chart({ candles, positions = [], history = [] }) {
     };
   }, []);
 
-  // --- Логика обновления данных (Исправлена кнопка Load) ---
+  // --- Обновление данных (Свечи) ---
   useEffect(() => {
     const chart  = chartRef.current;
     const series = seriesRef.current;
@@ -106,33 +96,33 @@ export default function Chart({ candles, positions = [], history = [] }) {
       close: c.close,
     }));
 
-    // Определяем, новые это данные или обновление текущих
     const currentStartTime = data.length > 0 ? data[0].time : null;
-    
-    // Если время первой свечи изменилось - значит загрузили новый тикер или таймфрейм
-    // ИЛИ если это самый первый рендер (!fitDone.current)
     const isNewDataSet = currentStartTime !== firstCandleTime.current || !fitDone.current;
 
     if (isNewDataSet) {
-      // Полная перезапись данных
+      // Это полная загрузка новых данных (смена монеты или таймфрейма)
       series.setData(data);
-      chart.timeScale().fitContent();
+      
+      // ИСПРАВЛЕНИЕ 1: Скроллим к концу только ПРИ ПЕРВОЙ ЗАГРУЗКЕ данных
+      // fitContent() покажет весь график, но можно использовать scrollToRealTime()
+      // если хотите видеть только хвост. fitContent удобнее для обзора.
+      chart.timeScale().fitContent(); 
       
       fitDone.current = true;
       firstCandleTime.current = currentStartTime;
       
     } else {
-      // Просто обновление последней свечи (Live цена)
+      // Это обновление Realtime (тик цены)
       const last = data[data.length - 1];
       series.update(last);
-    }
-    
-    if (userAtEnd.current) {
-      chart.timeScale().scrollToRealTime();
+      
+      // ВАЖНО: Мы убрали отсюда chart.timeScale().scrollToRealTime().
+      // Теперь библиотека сама решает: если пользователь скроллит - она не мешает.
+      // Если пользователь в конце - она дорисовывает свечу и сдвигает график сама.
     }
   }, [candles]);
 
-  // --- ЛИНИИ (Positions) ---
+  // --- Линии позиций ---
   useEffect(() => {
     const series = seriesRef.current;
     if (!series || candles.length === 0) return;
@@ -161,7 +151,7 @@ export default function Chart({ candles, positions = [], history = [] }) {
     });
   }, [positions, candles]);
 
-  // --- МАРКЕРЫ (History) ---
+  // --- Маркеры истории ---
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
@@ -192,7 +182,6 @@ export default function Chart({ candles, positions = [], history = [] }) {
       return closest;
     };
 
-    // Маркеры истории
     if (history && history.length > 0) {
       history.forEach(h => {
         const tOpen = findClosestTime(h.timestamp_open);
@@ -212,7 +201,7 @@ export default function Chart({ candles, positions = [], history = [] }) {
         if (tClose) {
           const profitVal = parseFloat(h.profit || 0);
           const profitStr = profitVal > 0 ? `+${profitVal.toFixed(2)}` : `${profitVal.toFixed(2)}`;
-          const pColor = profitVal >= 0 ? '#2ecc71' : '#e74c3c';
+          // const pColor = profitVal >= 0 ? '#2ecc71' : '#e74c3c';
 
           markers.push({
             time: tClose,
