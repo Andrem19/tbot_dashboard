@@ -6,10 +6,8 @@ export default function Chart({ candles, positions = [], history = [] }) {
   const chartRef     = useRef(null);
   const seriesRef    = useRef(null);
   
-  // Храним время первой свечи для определения полной перезагрузки данных
   const firstCandleTime = useRef(null); 
   const fitDone         = useRef(false);
-  
   const priceLines      = useRef([]);
 
   // --- Инициализация графика ---
@@ -34,7 +32,7 @@ export default function Chart({ candles, positions = [], history = [] }) {
       },
       crosshair: { mode: CrosshairMode.Normal },
       
-      // Настройка отступов для мобильных (как обсуждали ранее)
+      // Настройка отступов (симметричные, чтобы цена была по центру)
       rightPriceScale: { 
         borderVisible: false,
         scaleMargins: {
@@ -46,14 +44,16 @@ export default function Chart({ candles, positions = [], history = [] }) {
       timeScale: {
         borderVisible: false,
         timeVisible: true,
-        // ИСПРАВЛЕНИЕ 2: Убираем отступ справа полностью
-        rightOffset: 0, 
-        barSpacing: isMobile ? 3 : 6,
+        rightOffset: 0, // Без отступа справа (прижимаем к краю)
+        barSpacing: isMobile ? 6 : 8, // Сделаем свечи чуть крупнее по умолчанию
         minBarSpacing: 2,
-        fixLeftEdge: true,
-        fixRightEdge: true,
+        // ВАЖНО: Убрали fixLeftEdge и fixRightEdge.
+        // Теперь график свободно плавает, как в TradingView.
+        fixLeftEdge: false, 
+        fixRightEdge: false,
       },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true },
+      // Разрешаем все виды прокрутки и зума
+      handleScroll: { mouseWheel: true, pressedMouseMove: true, vertTouchDrag: false },
       handleScale : { axisPressedMouseMove: true, mouseWheel: true, pinch: true },
     });
 
@@ -67,7 +67,6 @@ export default function Chart({ candles, positions = [], history = [] }) {
     chartRef.current  = chart;
     seriesRef.current = series;
 
-    // ResizeObserver для точной подгонки размера
     const resizeObserver = new ResizeObserver((entries) => {
       if (entries.length === 0 || !entries[0].target) return;
       const { width, height } = entries[0].contentRect;
@@ -82,7 +81,7 @@ export default function Chart({ candles, positions = [], history = [] }) {
     };
   }, []);
 
-  // --- Обновление данных (Свечи) ---
+  // --- Обновление данных ---
   useEffect(() => {
     const chart  = chartRef.current;
     const series = seriesRef.current;
@@ -100,29 +99,28 @@ export default function Chart({ candles, positions = [], history = [] }) {
     const isNewDataSet = currentStartTime !== firstCandleTime.current || !fitDone.current;
 
     if (isNewDataSet) {
-      // Это полная загрузка новых данных (смена монеты или таймфрейма)
+      // 1. Заливаем данные
       series.setData(data);
       
-      // ИСПРАВЛЕНИЕ 1: Скроллим к концу только ПРИ ПЕРВОЙ ЗАГРУЗКЕ данных
-      // fitContent() покажет весь график, но можно использовать scrollToRealTime()
-      // если хотите видеть только хвост. fitContent удобнее для обзора.
-      chart.timeScale().fitContent(); 
+      // 2. ИСПРАВЛЕНИЕ: Вместо fitContent() (показать всё) используем scrollToRealTime().
+      // Это сдвинет график в конец (к текущей цене), но сохранит масштаб (зум).
+      // Предыдущие свечи уйдут "за экран" влево, и к ним можно будет скроллить.
+      chart.timeScale().scrollToRealTime();
       
       fitDone.current = true;
       firstCandleTime.current = currentStartTime;
       
     } else {
-      // Это обновление Realtime (тик цены)
+      // Обновление цены в реальном времени
       const last = data[data.length - 1];
       series.update(last);
       
-      // ВАЖНО: Мы убрали отсюда chart.timeScale().scrollToRealTime().
-      // Теперь библиотека сама решает: если пользователь скроллит - она не мешает.
-      // Если пользователь в конце - она дорисовывает свечу и сдвигает график сама.
+      // Здесь НЕТ принудительного скролла. 
+      // Если вы отмотали назад, график останется там, где вы его оставили.
     }
   }, [candles]);
 
-  // --- Линии позиций ---
+  // --- Линии (Positions) ---
   useEffect(() => {
     const series = seriesRef.current;
     if (!series || candles.length === 0) return;
@@ -151,7 +149,7 @@ export default function Chart({ candles, positions = [], history = [] }) {
     });
   }, [positions, candles]);
 
-  // --- Маркеры истории ---
+  // --- Маркеры (History) ---
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
@@ -166,7 +164,6 @@ export default function Chart({ candles, positions = [], history = [] }) {
       if (!targetTs) return null;
       const ts = Math.floor(targetTs);
       const minTime = candleTimes[0];
-      
       if (ts < minTime) return null; 
       
       let closest = minTime;
@@ -196,13 +193,10 @@ export default function Chart({ candles, positions = [], history = [] }) {
             size: 0.8,
           });
         }
-
         const tClose = findClosestTime(h.close_time);
         if (tClose) {
           const profitVal = parseFloat(h.profit || 0);
           const profitStr = profitVal > 0 ? `+${profitVal.toFixed(2)}` : `${profitVal.toFixed(2)}`;
-          // const pColor = profitVal >= 0 ? '#2ecc71' : '#e74c3c';
-
           markers.push({
             time: tClose,
             position: 'aboveBar',
@@ -217,7 +211,6 @@ export default function Chart({ candles, positions = [], history = [] }) {
 
     markers.sort((a, b) => a.time - b.time);
     if (markers.length) series.setMarkers(markers);
-
   }, [positions, candles, history]);
 
   return <div ref={containerRef} className="chart-container" />;
