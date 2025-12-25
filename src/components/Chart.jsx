@@ -9,6 +9,14 @@ export default function Chart({ candles, positions = [], history = [] }) {
   const firstCandleTime = useRef(null); 
   const fitDone         = useRef(false);
   const priceLines      = useRef([]);
+  
+  // Ref для доступа к актуальным позициям внутри autoscaleInfoProvider (который создается один раз)
+  const positionsRef = useRef(positions);
+
+  // Обновляем ref при изменении пропса positions
+  useEffect(() => {
+    positionsRef.current = positions;
+  }, [positions]);
 
   // --- Инициализация графика ---
   useEffect(() => {
@@ -32,17 +40,13 @@ export default function Chart({ candles, positions = [], history = [] }) {
       },
       crosshair: { mode: CrosshairMode.Normal },
       
-      // Настройка правой шкалы
       rightPriceScale: { 
         borderVisible: false,
-        // Оставляем отступы, чтобы цена была по центру
         scaleMargins: {
             top: isMobile ? 0.2 : 0.1, 
             bottom: isMobile ? 0.2 : 0.1,
         },
-        // Разрешаем авто-масштаб, но он отключится, если пользователь начнет скроллить
         autoScale: true,
-        // Включаем отображение тиков, чтобы шкала не казалась пустой
         ticksVisible: true, 
       },
       
@@ -56,18 +60,16 @@ export default function Chart({ candles, positions = [], history = [] }) {
         fixRightEdge: false,
       },
 
-      // === ИСПРАВЛЕНИЕ ЗДЕСЬ ===
-      // Разрешаем все взаимодействия
       handleScroll: { 
           mouseWheel: true, 
           pressedMouseMove: true, 
-          vertTouchDrag: true, // <--- ВАЖНО: Разрешаем двигать цену вверх/вниз пальцем
+          vertTouchDrag: true,
           horzTouchDrag: true,
       },
       handleScale: { 
-          axisPressedMouseMove: true, // Разрешаем тянуть за шкалу цен
+          axisPressedMouseMove: true,
           mouseWheel: true, 
-          pinch: true, // Разрешаем щипок двумя пальцами (зум)
+          pinch: true,
       },
     });
 
@@ -76,6 +78,34 @@ export default function Chart({ candles, positions = [], history = [] }) {
       wickUpColor: '#26a69a', wickDownColor: '#ef5350',
       borderVisible: false,
       priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
+      
+      // === РЕШЕНИЕ ПРОБЛЕМЫ 2: Умный авто-масштаб ===
+      // Эта функция заставляет график учитывать цены TP и SL при расчете границ экрана
+      autoscaleInfoProvider: (original) => {
+        const res = original();
+        const currentPositions = positionsRef.current || [];
+        
+        // Если есть свечи и есть активные позиции
+        if (res.priceRange !== null && currentPositions.length > 0) {
+           let min = res.priceRange.minValue;
+           let max = res.priceRange.maxValue;
+
+           // Пробегаемся по позициям и расширяем границы min/max
+           currentPositions.forEach(p => {
+             if (!p.visible) return;
+             // Собираем все цены (Entry, SL, TP), которые являются числами
+             const vals = [p.entryPx, p.sl, p.tp].filter(v => Number.isFinite(v));
+             vals.forEach(v => {
+               if (v < min) min = v;
+               if (v > max) max = v;
+             });
+           });
+
+           res.priceRange.minValue = min;
+           res.priceRange.maxValue = max;
+        }
+        return res;
+      },
     });
 
     chartRef.current  = chart;
@@ -114,14 +144,12 @@ export default function Chart({ candles, positions = [], history = [] }) {
 
     if (isNewDataSet) {
       series.setData(data);
-      // Скроллим к реальному времени только при первой загрузке
       chart.timeScale().scrollToRealTime();
       fitDone.current = true;
       firstCandleTime.current = currentStartTime;
     } else {
       const last = data[data.length - 1];
       series.update(last);
-      // Не вызываем scrollToRealTime(), чтобы не сбивать ручной скролл
     }
   }, [candles]);
 
@@ -133,7 +161,11 @@ export default function Chart({ candles, positions = [], history = [] }) {
     priceLines.current.forEach(l => { try { series.removePriceLine(l); } catch {} });
     priceLines.current = [];
 
-    const addLine = (price, color, title, style = LineStyle.Dashed) => {
+    // === РЕШЕНИЕ ПРОБЛЕМЫ 1: Убрали title ===
+    // Убрали параметр title из createPriceLine.
+    // Теперь на оси будет только чистое число (цена), без текста и тире.
+    // Цвета (Entry=Синий, SL=Красный, TP=Зеленый) остаются.
+    const addLine = (price, color, style = LineStyle.Dashed) => {
       if (!Number.isFinite(price)) return;
       const line = series.createPriceLine({
         price,
@@ -141,16 +173,16 @@ export default function Chart({ candles, positions = [], history = [] }) {
         lineWidth: 1,
         lineStyle: style,
         axisLabelVisible: true,
-        title: title || '',
+        title: '', // Пустая строка убирает текст и тире с метки оси
       });
       priceLines.current.push(line);
     };
 
     positions.forEach(p => {
       if (!p.visible) return;
-      addLine(p.entryPx, '#2962ff', `Entry`, LineStyle.Solid); 
-      addLine(p.sl, '#ef5350', `SL`);
-      addLine(p.tp, '#26a69a', `TP`);
+      addLine(p.entryPx, '#2962ff', LineStyle.Solid); 
+      addLine(p.sl, '#ef5350');
+      addLine(p.tp, '#26a69a');
     });
   }, [positions, candles]);
 
