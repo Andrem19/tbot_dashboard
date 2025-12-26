@@ -197,6 +197,8 @@ html, body, #root {
 
 /* ... [Previous CSS content remains] ... */
 
+/* ... [Остальной CSS без изменений] ... */
+
 /* === Heatmap (Updated) === */
 .heatmap-container {
   flex-shrink: 0;
@@ -206,6 +208,8 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 35vh; 
+  overflow-y: auto;
 }
 
 /* Header Section */
@@ -215,12 +219,17 @@ html, body, #root {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  position: sticky; 
+  top: 0;
+  background: var(--bg-panel);
+  z-index: 20;
+  padding-bottom: 4px;
 }
 
 .hm-title-section {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .panel-title {
@@ -235,13 +244,13 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-primary);
-  background: rgba(0,0,0,0.2);
-  padding: 2px 8px;
-  border-radius: 4px;
+  background: rgba(255,255,255,0.05);
+  padding: 2px 6px;
+  border-radius: 3px;
 }
-.hm-stats-box .sep { color: var(--border); }
+.hm-stats-box .sep { color: var(--border); margin: 0 2px; }
 .hm-hint { font-size: 11px; color: var(--text-secondary); font-style: italic; }
 
 .hm-actions {
@@ -259,11 +268,9 @@ html, body, #root {
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .hm-actions button:hover { background: var(--bg-hover); }
 .hm-actions .btn-clear { color: var(--text-secondary); }
 .hm-actions .btn-clear:hover { color: var(--red); border-color: var(--red); }
-
 
 /* GRID LAYOUTS */
 .heatmap-grid {
@@ -271,50 +278,29 @@ html, body, #root {
   gap: 2px;
   /* Default Mobile: 5 columns (Mon-Fri) */
   grid-template-columns: repeat(5, 1fr);
+  padding-bottom: 10px;
 }
 
 .heatmap-cell {
   position: relative;
   height: 40px;
   border-radius: 2px;
-  background-color: #1e222d; /* Default empty color */
-  border: 1px solid transparent; /* Prepare for border */
+  background-color: #1e222d;
+  border: 1px solid transparent;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: transform 0.1s;
   user-select: none;
 }
+.heatmap-cell:hover { z-index: 10; transform: scale(1.05); box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+.heatmap-cell.selected { border-color: #fff; z-index: 5; }
 
-.heatmap-cell:hover {
-  z-index: 10;
-  transform: scale(1.1);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-}
-
-/* Selected State */
-.heatmap-cell.selected {
-  border-color: #fff;
-  z-index: 5;
-}
-
-/* Spacers & Weekends logic */
-.heatmap-cell.spacer {
-  background: transparent;
-  pointer-events: none;
-  border: none;
-}
-
-.heatmap-cell.weekend {
-  /* On mobile, weekends are hidden to keep the 5-in-row look compact */
-  display: none; 
-}
-.heatmap-cell.spacer {
-  /* On mobile, spacers (31st dates) are hidden */
-  display: none;
-}
+/* === МОБИЛЬНАЯ ЛОГИКА (скрываем лишнее) === */
+.heatmap-cell.weekend { display: none; }
+.heatmap-cell.spacer { display: none; }
+.heatmap-cell.hidden-mobile { display: none !important; } /* Скрывает недели ДО первой сделки */
 
 /* Content inside cell */
 .hm-day-label {
@@ -322,7 +308,7 @@ html, body, #root {
   top: 1px;
   left: 2px;
   font-size: 8px;
-  opacity: 0.7;
+  opacity: 0.6;
   color: #fff;
 }
 .hm-day-number-faded {
@@ -334,7 +320,6 @@ html, body, #root {
   font-size: 11px;
   font-weight: 600;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
 }
 
 /* === DESKTOP OVERRIDES (> 768px) === */
@@ -346,33 +331,39 @@ html, body, #root {
   }
 
   .heatmap-cell {
-    height: 30px; /* Slightly shorter on desktop to fit vertically */
+    height: 30px; 
     min-width: 20px;
   }
   
-  /* Show weekends and spacers on desktop to maintain the 31-grid alignment */
+  /* НА ПК ПОКАЗЫВАЕМ ВСЁ */
   .heatmap-cell.weekend {
     display: flex;
-    background-color: #161920; /* Darker for weekend */
+    background-color: #161920;
   }
-  
   .heatmap-cell.spacer {
     display: block;
-    background: #131722; /* Very dark/invisible */
+    background: #131722;
     opacity: 0.3;
+    pointer-events: none;
+  }
+  .heatmap-cell.hidden-mobile {
+    display: flex !important; /* На ПК эти ячейки видны */
   }
   
-  .hm-profit-val { font-size: 9px; } /* Smaller font for dense grid */
+  .hm-profit-val { font-size: 9px; }
 }
 
 /* === MOBILE FIXES (< 768px) === */
 @media (max-width: 768px) {
   .heatmap-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch; 
+  }
+  .hm-title-section {
+    justify-content: space-between;
+    margin-bottom: 6px;
   }
   .hm-actions {
-    width: 100%;
     justify-content: space-between;
   }
   .hm-actions button {

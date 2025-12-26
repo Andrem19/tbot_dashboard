@@ -21,6 +21,13 @@ function formatDateKey(date) {
   return `${y}-${m}-${d}`;
 }
 
+// Функция для получения "чистой" даты (без времени) для корректного сравнения
+function getPureDate(timestampOrDate) {
+  const d = new Date(timestampOrDate);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
 export default function HistoryHeatmap({ history = [] }) {
   const [selectedKeys, setSelectedKeys] = useState(new Set());
 
@@ -34,11 +41,13 @@ export default function HistoryHeatmap({ history = [] }) {
     let maxProfit = 0;
     const map = {};
 
-    // 1. Map history & find min timestamp
+    // Находим самую раннюю сделку
     let minTs = Infinity;
+
     history.forEach(item => {
       if (item.profit < minProfit) minProfit = item.profit;
       if (item.profit > maxProfit) maxProfit = item.profit;
+      
       const ts = item.timestamp_open * 1000;
       if (ts < minTs) minTs = ts;
 
@@ -53,24 +62,23 @@ export default function HistoryHeatmap({ history = [] }) {
       }
     });
 
-    // 2. Рассчитываем понедельник недели, в которой была ПЕРВАЯ сделка
-    // Это нужно для мобильной версии, чтобы обрезать пустые недели до старта
+    // 2. Рассчитываем Понедельник недели первой сделки
     const firstTradeDate = new Date(minTs);
-    firstTradeDate.setHours(0,0,0,0);
-    const day = firstTradeDate.getDay(); // 0-Sun, 1-Mon...
-    // Смещаемся на понедельник (если вс, то -6, иначе день-1)
-    const diff = firstTradeDate.getDate() - day + (day === 0 ? -6 : 1);
-    const firstTradeWeekMonday = new Date(firstTradeDate);
-    firstTradeWeekMonday.setDate(diff);
-    firstTradeWeekMonday.setHours(0,0,0,0); // Обнуляем время для корректного сравнения
+    const dayOfWeek = firstTradeDate.getDay(); // 0 (Sun) - 6 (Sat)
+    // Если воскресенье (0), отнимаем 6 дней. Если Пн-Сб, отнимаем (day - 1)
+    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    
+    const startWeekMonday = new Date(firstTradeDate);
+    startWeekMonday.setDate(firstTradeDate.getDate() - diffToMonday);
+    startWeekMonday.setHours(0, 0, 0, 0); // Обнуляем время для сравнения
 
-    // 3. Start Date logic (для ПК всегда начинаем с 1-го числа месяца первой сделки)
+    // 3. Генерируем сетку (Начинаем с 1-го числа месяца первой сделки, чтобы на ПК было красиво)
     const now = new Date();
     const startDate = new Date(minTs);
     startDate.setDate(1); 
-    startDate.setHours(0,0,0,0);
+    startDate.setHours(0, 0, 0, 0);
+    
     const endDate = new Date(now);
-
     const cells = [];
     const current = new Date(startDate);
 
@@ -78,12 +86,11 @@ export default function HistoryHeatmap({ history = [] }) {
     while (current <= endDate) {
       const monthIndex = current.getMonth();
       
-      // Loop Days 1 to 31 (Строка месяца для ПК)
+      // Loop Days 1 to 31
       for (let d = 1; d <= 31; d++) {
         const cellDate = new Date(current.getFullYear(), monthIndex, d);
-        const isOverflow = cellDate.getMonth() !== monthIndex; // Февраль 30 и т.д.
+        const isOverflow = cellDate.getMonth() !== monthIndex; // Проверка на переполнение (30 фев и т.д.)
         
-        // Spacer (пустышка для выравнивания сетки на ПК)
         if (isOverflow) {
           cells.push({
             id: `spacer-${current.getFullYear()}-${monthIndex}-${d}`,
@@ -95,11 +102,12 @@ export default function HistoryHeatmap({ history = [] }) {
 
         const key = formatDateKey(cellDate);
         const data = map[key];
-        const dayOfWeek = cellDate.getDay(); 
-        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-
-        // Флаг: ячейка находится ДО недели старта? (Скрываем на моб)
-        const isBeforeStartWeek = cellDate < firstTradeWeekMonday;
+        const dw = cellDate.getDay(); 
+        const isWeekend = (dw === 0 || dw === 6);
+        
+        // Сравниваем текущую ячейку с понедельником старта
+        // Используем getTime() для надежного числового сравнения
+        const isBeforeStart = cellDate.getTime() < startWeekMonday.getTime();
 
         cells.push({
           id: key,
@@ -108,15 +116,15 @@ export default function HistoryHeatmap({ history = [] }) {
           profit: data ? data.profit : 0,
           hasData: !!data,
           color: data ? getColor(data.profit, minProfit, maxProfit) : null,
-          isBeforeStartWeek // <--- Новый флаг
+          isHiddenOnMobile: isBeforeStart // <--- Главный флаг для скрытия
         });
       }
-      // Move to next month
+      
       current.setMonth(current.getMonth() + 1);
       current.setDate(1);
     }
 
-    // Stats for header
+    // Stats
     let sum = 0; 
     let count = 0;
     selectedKeys.forEach(key => {
@@ -200,13 +208,15 @@ export default function HistoryHeatmap({ history = [] }) {
       <div className="heatmap-grid">
         {gridCells.map((cell) => {
           if (cell.type === 'spacer') {
+            // На ПК это пустая ячейка, на Мобайл - скрыта
             return <div key={cell.id} className="heatmap-cell spacer" />;
           }
 
           const isSelected = selectedKeys.has(cell.dateStr);
           let cellClass = "heatmap-cell";
+          
           if (cell.type === 'weekend') cellClass += " weekend";
-          if (cell.isBeforeStartWeek) cellClass += " before-mobile-start"; // CSS скроет это на моб
+          if (cell.isHiddenOnMobile) cellClass += " hidden-mobile"; // Новый класс
           if (!cell.hasData) cellClass += " empty";
           if (isSelected) cellClass += " selected";
 
@@ -225,6 +235,7 @@ export default function HistoryHeatmap({ history = [] }) {
                    </div>
                  </>
               )}
+              {/* Дата показывается, только если есть данные ИЛИ если это не мобильный режим (управляется CSS) */}
               {!cell.hasData && (
                  <span className="hm-day-number-faded">{new Date(cell.dateStr).getDate()}</span>
               )}
