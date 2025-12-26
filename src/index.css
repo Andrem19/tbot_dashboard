@@ -195,10 +195,6 @@ html, body, #root {
 .report-key { color: var(--text-secondary); }
 .report-value { color: var(--text-primary); font-weight: 600; font-feature-settings: "tnum"; }
 
-/* ... [Previous CSS content remains] ... */
-
-/* ... [Остальной CSS без изменений] ... */
-
 /* === Heatmap (Updated) === */
 .heatmap-container {
   flex-shrink: 0;
