@@ -237,7 +237,7 @@ export default function HistoryHeatmap({ history = [] }) {
                  <>
                    <span className="hm-day-label">{new Date(cell.dateStr).getDate()}</span>
                    <div className="hm-profit-val">
-                      {Math.floor(cell.profit)}
+                      {Number(cell.profit).toFixed(2)}
                    </div>
                  </>
               )}
