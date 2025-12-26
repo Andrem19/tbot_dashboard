@@ -87,7 +87,7 @@ return (
     <div className="app-container">
       {/* 1. Верхняя панель */}
       <form className="form-row" onSubmit={onSubmit}>
-        <label>Coin <input name="coin" value={form.coin} onChange={onChange} /></label>
+        <label>Coin <input name="coin" value={form.coin} onChange={onChange} disabled /></label>
         <label>Candles <input type="number" name="number_candles" value={form.number_candles} onChange={onChange} /></label>
         <label>Interval (m) <input type="number" name="interv" value={form.interv} onChange={onChange} /></label>
         <button type="submit">Load</button>
