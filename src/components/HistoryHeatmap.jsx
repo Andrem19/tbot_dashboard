@@ -1,21 +1,19 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 
+/* --- Helpers --- */
+
+// Color logic
 function getColor(profit, minP, maxP) {
-  if (profit === 0) return '#2a2e39';
+  if (profit === 0) return 'var(--bg-input)'; // Neutral background for 0
   if (profit > 0) {
     const ratio = maxP > 0 ? Math.min(1, profit / maxP) : 0;
-    const opacity = 0.3 + (0.7 * ratio); // Чуть ярче
-    return `rgba(38, 166, 154, ${opacity})`;
+    const opacity = 0.4 + (0.6 * ratio);
+    return `rgba(38, 166, 154, ${opacity})`; // Green
   } else {
     const ratio = minP < 0 ? Math.min(1, profit / minP) : 0;
-    const opacity = 0.3 + (0.7 * ratio);
-    return `rgba(239, 83, 80, ${opacity})`;
+    const opacity = 0.4 + (0.6 * ratio);
+    return `rgba(239, 83, 80, ${opacity})`; // Red
   }
-}
-
-function isWeekend(date) {
-  const day = date.getDay();
-  return day === 0 || day === 6;
 }
 
 function formatDateKey(date) {
@@ -26,94 +24,230 @@ function formatDateKey(date) {
 }
 
 export default function HistoryHeatmap({ history = [] }) {
-  // Состояние для выбранной ячейки (для мобильных и ПК)
-  const [selectedCell, setSelectedCell] = useState(null);
+  // Use a Set for multiple selection
+  const [selectedKeys, setSelectedKeys] = useState(new Set());
 
-  const { gridCells } = useMemo(() => {
-    if (!history || history.length === 0) return { gridCells: [] };
-    
-    let minP = 0, maxP = 0;
-    const historyMap = {};
-    
+  // 1. Prepare Data Grid (Full Months 1-31)
+  const { gridCells, historyMap, minP, maxP } = useMemo(() => {
+    if (!history || history.length === 0) {
+      return { gridCells: [], historyMap: {}, minP: 0, maxP: 0 };
+    }
+
+    let minProfit = 0;
+    let maxProfit = 0;
+    const map = {};
+
+    // 1. Map history
     history.forEach(item => {
-      if (item.profit < minP) minP = item.profit;
-      if (item.profit > maxP) maxP = item.profit;
+      if (item.profit < minProfit) minProfit = item.profit;
+      if (item.profit > maxProfit) maxProfit = item.profit;
       const date = new Date(item.timestamp_open * 1000);
       const key = formatDateKey(date);
-      historyMap[key] = item;
+      // If multiple trades same day, sum them up or take last? 
+      // Usually heatmaps sum up for the day. Let's assume one entry per day or sum.
+      // For safety, if key exists, we sum profit.
+      if (map[key]) {
+        map[key].profit += item.profit;
+        map[key].count = (map[key].count || 1) + 1;
+      } else {
+        map[key] = { ...item, count: 1 };
+      }
     });
 
+    // 2. Determine Date Range (Start of first month -> Today)
     const timestamps = history.map(h => h.timestamp_open * 1000);
     const minTime = Math.min(...timestamps);
-    const maxTime = Date.now();
+    const now = new Date();
     
+    // Start from the 1st of the starting month
     const startDate = new Date(minTime);
-    const endDate = new Date(maxTime);
-    
+    startDate.setDate(1); 
+    startDate.setHours(0,0,0,0);
+
+    const endDate = new Date(now); 
+
     const cells = [];
     const current = new Date(startDate);
-    
-    // Выравниваем на понедельник, чтобы сетка была красивой
-    const day = current.getDay();
-    const diff = current.getDate() - day + (day === 0 ? -6 : 1);
-    current.setDate(diff);
 
+    // Loop Month by Month
     while (current <= endDate) {
-      if (!isWeekend(current)) {
-        const key = formatDateKey(current);
-        const data = historyMap[key];
+      const monthIndex = current.getMonth(); // 0-11
+      // Loop Days 1 to 31
+      for (let d = 1; d <= 31; d++) {
+        // Create a specific date for this cell
+        const cellDate = new Date(current.getFullYear(), monthIndex, d);
+        const dayOfWeek = cellDate.getDay(); // 0=Sun, 6=Sat
+        
+        // Check if valid date (e.g. Feb 30 is invalid -> rolls over to Mar)
+        // If cellDate.getMonth() !== monthIndex, it means we overflowed (e.g. Feb 30)
+        const isOverflow = cellDate.getMonth() !== monthIndex;
+        
+        // We create a "Spacer" for overflow days to keep the 31-grid alignment on desktop
+        if (isOverflow) {
+          cells.push({
+            id: `spacer-${current.getFullYear()}-${monthIndex}-${d}`,
+            type: 'spacer',
+            dateStr: null,
+            profit: 0
+          });
+          continue;
+        }
+
+        const key = formatDateKey(cellDate);
+        const data = map[key];
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+
         cells.push({
-            dateStr: key,
-            hasData: !!data,
-            side: data?.side,
-            profit: data?.profit,
-            color: data ? getColor(data.profit, minP, maxP) : '#1e222d', // Цвет пустой ячейки под фон
+          id: key,
+          dateStr: key,
+          type: isWeekend ? 'weekend' : 'trading', // weekend vs trading day
+          profit: data ? data.profit : 0,
+          hasData: !!data,
+          color: data ? getColor(data.profit, minProfit, maxProfit) : null,
+          fullDate: cellDate
         });
       }
-      current.setDate(current.getDate() + 1);
+
+      // Move to next month
+      current.setMonth(current.getMonth() + 1);
+      current.setDate(1);
     }
-    return { gridCells: cells };
+
+    return { gridCells: cells, historyMap: map, minP: minProfit, maxP: maxProfit };
   }, [history]);
+
+  /* --- Handlers --- */
+
+  const toggleCell = (key) => {
+    if (!key) return;
+    const newSet = new Set(selectedKeys);
+    if (newSet.has(key)) {
+      newSet.delete(key);
+    } else {
+      newSet.add(key);
+    }
+    setSelectedKeys(newSet);
+  };
+
+  // Select Last Week (last 7 calendar days)
+  const selectLastWeek = () => {
+    const newSet = new Set();
+    const today = new Date();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const key = formatDateKey(d);
+      // Only add if it exists in our map (has data) or is a valid trading day?
+      // Let's selecting distinct keys regardless of data to show 0.
+      newSet.add(key);
+    }
+    setSelectedKeys(newSet);
+  };
+
+  // Select Current Month
+  const selectCurrentMonth = () => {
+    const newSet = new Set();
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    // Loop 1 to 31
+    for (let d = 1; d <= 31; d++) {
+       const date = new Date(year, month, d);
+       if (date.getMonth() !== month) break;
+       newSet.add(formatDateKey(date));
+    }
+    setSelectedKeys(newSet);
+  };
+
+  const clearSelection = () => setSelectedKeys(new Set());
+
+  // Calculate Stats
+  const selectedStats = useMemo(() => {
+    let sum = 0;
+    let count = 0;
+    selectedKeys.forEach(key => {
+      const item = historyMap[key];
+      if (item) {
+        sum += item.profit;
+        count += 1;
+      }
+    });
+    return { sum, count };
+  }, [selectedKeys, historyMap]);
 
   if (!gridCells.length) return <div className="heatmap-empty">No History Data</div>;
 
   return (
     <div className="heatmap-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-         <h3 className="panel-title" style={{ margin: 0 }}>Trading History</h3>
-         {/* Отображаем детали выбранного дня здесь */}
-         {selectedCell && (
-             <div style={{ fontSize: '12px', color: '#fff', fontWeight: 'bold' }}>
-                 {selectedCell.dateStr}: 
-                 <span style={{ 
-                     color: (selectedCell.profit || 0) >= 0 ? '#26a69a' : '#ef5350',
-                     marginLeft: '6px'
-                 }}>
-                    {selectedCell.profit ? selectedCell.profit.toFixed(2) : '0.00'} $
-                 </span>
+      {/* Top Bar: Title + Stats + Buttons */}
+      <div className="heatmap-header">
+        <div className="hm-title-section">
+          <h3 className="panel-title">Trading History</h3>
+          
+          {selectedKeys.size > 0 ? (
+             <div className="hm-stats-box">
+                <span>Selected: {selectedKeys.size} days</span>
+                <span className="sep">|</span>
+                <span>Total: </span>
+                <span style={{ 
+                    color: selectedStats.sum >= 0 ? 'var(--green)' : 'var(--red)',
+                    fontWeight: 'bold'
+                }}>
+                  {selectedStats.sum > 0 ? '+' : ''}{selectedStats.sum.toFixed(2)} $
+                </span>
              </div>
-         )}
+          ) : (
+            <span className="hm-hint">Select cells to see total</span>
+          )}
+        </div>
+
+        <div className="hm-actions">
+          <button onClick={selectLastWeek}>Last Week</button>
+          <button onClick={selectCurrentMonth}>Month</button>
+          {selectedKeys.size > 0 && (
+             <button onClick={clearSelection} className="btn-clear">Clear</button>
+          )}
+        </div>
       </div>
 
+      {/* Grid */}
       <div className="heatmap-grid">
         {gridCells.map((cell) => {
-          const isSelected = selectedCell?.dateStr === cell.dateStr;
+          // Spacer logic is handled via CSS classes
+          if (cell.type === 'spacer') {
+            return <div key={cell.id} className="heatmap-cell spacer" />;
+          }
+
+          const isSelected = selectedKeys.has(cell.dateStr);
+          
+          // Determining class for weekends/empty days
+          let cellClass = "heatmap-cell";
+          if (cell.type === 'weekend') cellClass += " weekend";
+          if (!cell.hasData) cellClass += " empty";
+          if (isSelected) cellClass += " selected";
+
           return (
             <div
-              key={cell.dateStr}
-              className="heatmap-cell"
-              onClick={() => setSelectedCell(cell)} // Клик работает везде
-              style={{ 
-                  backgroundColor: cell.color,
-                  border: isSelected ? '2px solid #fff' : 'none', // Белая рамка при выборе
-                  transform: isSelected ? 'scale(0.95)' : 'none'
+              key={cell.id}
+              className={cellClass}
+              onClick={() => toggleCell(cell.dateStr)}
+              title={`${cell.dateStr} | PnL: ${cell.profit}`}
+              style={{
+                 // Only set background if it has data, otherwise CSS handles default
+                 backgroundColor: cell.hasData ? cell.color : undefined
               }}
             >
               {cell.hasData && (
-                  <>
-                      <div className="hm-signal">{cell.side}</div>
-                      <div className="hm-profit">{cell.profit?.toFixed(1)}</div>
-                  </>
+                 <>
+                   <span className="hm-day-label">{new Date(cell.dateStr).getDate()}</span>
+                   <div className="hm-profit-val">
+                      {cell.profit > 0 ? '+' : ''}{Math.floor(cell.profit)}
+                   </div>
+                 </>
+              )}
+              {/* Show date number even if empty, for calendar context */}
+              {!cell.hasData && cell.type !== 'spacer' && (
+                 <span className="hm-day-number-faded">{new Date(cell.dateStr).getDate()}</span>
               )}
             </div>
           );

@@ -195,56 +195,192 @@ html, body, #root {
 .report-key { color: var(--text-secondary); }
 .report-value { color: var(--text-primary); font-weight: 600; font-feature-settings: "tnum"; }
 
-/* === Heatmap (Тепловая карта) === */
+/* ... [Previous CSS content remains] ... */
+
+/* === Heatmap (Updated) === */
 .heatmap-container {
   flex-shrink: 0;
   background: var(--bg-panel);
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
-  max-height: 25vh; /* Ограничим высоту, чтобы график был главным */
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Header Section */
+.heatmap-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hm-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .panel-title {
-  margin: 0 0 8px 0;
+  margin: 0;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-secondary);
 }
 
+.hm-stats-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-primary);
+  background: rgba(0,0,0,0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.hm-stats-box .sep { color: var(--border); }
+.hm-hint { font-size: 11px; color: var(--text-secondary); font-style: italic; }
+
+.hm-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.hm-actions button {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.hm-actions button:hover { background: var(--bg-hover); }
+.hm-actions .btn-clear { color: var(--text-secondary); }
+.hm-actions .btn-clear:hover { color: var(--red); border-color: var(--red); }
+
+
+/* GRID LAYOUTS */
 .heatmap-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); /* Адаптивная сетка */
-  gap: 4px;
+  gap: 2px;
+  /* Default Mobile: 5 columns (Mon-Fri) */
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .heatmap-cell {
-  height: 50px;
-  border-radius: 3px;
+  position: relative;
+  height: 40px;
+  border-radius: 2px;
+  background-color: #1e222d; /* Default empty color */
+  border: 1px solid transparent; /* Prepare for border */
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  cursor: default;
-  transition: transform 0.1s, box-shadow 0.1s;
-  position: relative;
-  overflow: hidden;
+  transition: transform 0.1s;
+  user-select: none;
 }
 
 .heatmap-cell:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-  z-index: 2;
+  z-index: 10;
+  transform: scale(1.1);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
 }
 
-.hm-signal { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
-.hm-profit { font-size: 10px; opacity: 0.9; }
+/* Selected State */
+.heatmap-cell.selected {
+  border-color: #fff;
+  z-index: 5;
+}
 
-.heatmap-empty { padding: 10px; text-align: center; color: var(--text-secondary); font-size: 12px; }
+/* Spacers & Weekends logic */
+.heatmap-cell.spacer {
+  background: transparent;
+  pointer-events: none;
+  border: none;
+}
+
+.heatmap-cell.weekend {
+  /* On mobile, weekends are hidden to keep the 5-in-row look compact */
+  display: none; 
+}
+.heatmap-cell.spacer {
+  /* On mobile, spacers (31st dates) are hidden */
+  display: none;
+}
+
+/* Content inside cell */
+.hm-day-label {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  font-size: 8px;
+  opacity: 0.7;
+  color: #fff;
+}
+.hm-day-number-faded {
+  font-size: 10px;
+  color: #363a45;
+  font-weight: bold;
+}
+.hm-profit-val {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+/* === DESKTOP OVERRIDES (> 768px) === */
+@media (min-width: 769px) {
+  .heatmap-grid {
+    /* Desktop: 31 columns for full calendar view */
+    grid-template-columns: repeat(31, 1fr); 
+    gap: 1px;
+  }
+
+  .heatmap-cell {
+    height: 30px; /* Slightly shorter on desktop to fit vertically */
+    min-width: 20px;
+  }
+  
+  /* Show weekends and spacers on desktop to maintain the 31-grid alignment */
+  .heatmap-cell.weekend {
+    display: flex;
+    background-color: #161920; /* Darker for weekend */
+  }
+  
+  .heatmap-cell.spacer {
+    display: block;
+    background: #131722; /* Very dark/invisible */
+    opacity: 0.3;
+  }
+  
+  .hm-profit-val { font-size: 9px; } /* Smaller font for dense grid */
+}
+
+/* === MOBILE FIXES (< 768px) === */
+@media (max-width: 768px) {
+  .heatmap-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .hm-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .hm-actions button {
+    flex: 1;
+    text-align: center;
+    padding: 6px 0;
+  }
+}
 
 /* === Статус бар === */
 .status-bar {
