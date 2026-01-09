@@ -24,7 +24,6 @@ function formatDateKey(date) {
 export default function HistoryHeatmap({ history = [] }) {
   const [selectedKeys, setSelectedKeys] = useState(new Set());
 
-  // 1. Prepare Data Grid
   const { weeklyCells, monthlyCells, historyMap, selectedStats } = useMemo(() => {
     if (!history || history.length === 0) {
       return {
@@ -39,7 +38,6 @@ export default function HistoryHeatmap({ history = [] }) {
     let maxProfit = 0;
     const map = {};
 
-    // Находим самую раннюю сделку
     let minTs = Infinity;
 
     history.forEach((item) => {
@@ -52,15 +50,22 @@ export default function HistoryHeatmap({ history = [] }) {
       const date = new Date(ts);
       const key = formatDateKey(date);
 
+      const sideVal = Number.isFinite(item.side) ? item.side : 0;
+
       if (map[key]) {
         map[key].profit += item.profit;
         map[key].count = (map[key].count || 1) + 1;
+        map[key].sideSum = (map[key].sideSum || 0) + sideVal; // <-- аккумулируем side за день
       } else {
-        map[key] = { ...item, count: 1 };
+        map[key] = {
+          ...item,
+          count: 1,
+          sideSum: sideVal, // <-- side за день (сумма)
+        };
       }
     });
 
-    // 2. Рассчитываем Понедельник недели первой сделки
+    // Понедельник недели первой сделки
     const firstTradeDate = new Date(minTs);
     const dayOfWeek = firstTradeDate.getDay(); // 0=Sun..6=Sat
     const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -69,12 +74,12 @@ export default function HistoryHeatmap({ history = [] }) {
     startWeekMonday.setDate(firstTradeDate.getDate() - diffToMonday);
     startWeekMonday.setHours(0, 0, 0, 0);
 
-    // 3. "Сегодня"
+    // Сегодня
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     // ============================
-    // A) WEEKLY GRID (MOBILE): Пн–Вс, одна строка = одна неделя
+    // A) WEEKLY GRID (MOBILE)
     // ============================
     const endWeekSunday = new Date(today);
     const dowMon0 = (endWeekSunday.getDay() + 6) % 7; // Mon=0..Sun=6
@@ -83,11 +88,12 @@ export default function HistoryHeatmap({ history = [] }) {
 
     const weekly = [];
     const curW = new Date(startWeekMonday);
+
     while (curW <= endWeekSunday) {
       const key = formatDateKey(curW);
       const data = map[key];
 
-      const dw = curW.getDay(); // 0=Sun..6=Sat
+      const dw = curW.getDay();
       const isWeekend = dw === 0 || dw === 6;
       const isFuture = curW.getTime() > today.getTime();
 
@@ -97,9 +103,10 @@ export default function HistoryHeatmap({ history = [] }) {
         dayNum: curW.getDate(),
         type: isWeekend ? 'weekend' : 'trading',
         profit: data ? data.profit : 0,
+        side: data ? (Number.isFinite(data.sideSum) ? data.sideSum : 0) : null, // <-- cell.side
         hasData: !!data,
         color: data ? getColor(data.profit, minProfit, maxProfit) : null,
-        isDisabled: isFuture, // чтобы неделя была 7 клеток, но будущее нельзя кликать
+        isDisabled: isFuture,
       });
 
       curW.setDate(curW.getDate() + 1);
@@ -107,7 +114,7 @@ export default function HistoryHeatmap({ history = [] }) {
     }
 
     // ============================
-    // B) MONTHLY GRID (DESKTOP): как было (1..31, spacer, weekend)
+    // B) MONTHLY GRID (DESKTOP)
     // ============================
     const startDate = new Date(minTs);
     startDate.setDate(1);
@@ -145,7 +152,6 @@ export default function HistoryHeatmap({ history = [] }) {
 
         const isBeforeStart = cellDate.getTime() < startWeekMonday.getTime();
         const isFuture = cellDate.getTime() > today.getTime();
-
         const hideOnMobile = isBeforeStart || isFuture;
 
         monthly.push({
@@ -154,6 +160,7 @@ export default function HistoryHeatmap({ history = [] }) {
           dayNum: cellDate.getDate(),
           type: isWeekend ? 'weekend' : 'trading',
           profit: data ? data.profit : 0,
+          side: data ? (Number.isFinite(data.sideSum) ? data.sideSum : 0) : null, // <-- cell.side
           hasData: !!data,
           color: data ? getColor(data.profit, minProfit, maxProfit) : null,
           isHiddenOnMobile: hideOnMobile,
@@ -249,12 +256,17 @@ export default function HistoryHeatmap({ history = [] }) {
           {cell.hasData && (
             <>
               <span className="hm-day-label">{cell.dayNum}</span>
+
+              {/* <-- НОВОЕ: маленькая цифра side в правом верхнем углу */}
+              <span className="hm-side-label">{cell.side}</span>
+
               <div className="hm-profit-val">
                 {cell.profit > 0 ? '+' : ''}
                 {Number(cell.profit).toFixed(2)}
               </div>
             </>
           )}
+
           {!cell.hasData && cell.dayNum != null && (
             <span className="hm-day-number-faded">{cell.dayNum}</span>
           )}
