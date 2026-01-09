@@ -272,9 +272,17 @@ html, body, #root {
 .heatmap-grid {
   display: grid;
   gap: 2px;
-  /* Default Mobile: 5 columns (Mon-Fri) */
-  grid-template-columns: repeat(5, 1fr);
   padding-bottom: 10px;
+}
+
+/* MOBILE: показываем недельную сетку Пн–Вс */
+.heatmap-grid.weekly {
+  grid-template-columns: repeat(7, 1fr);
+}
+
+/* MOBILE: месячную сетку прячем */
+.heatmap-grid.monthly {
+  display: none;
 }
 
 .heatmap-cell {
@@ -293,10 +301,17 @@ html, body, #root {
 .heatmap-cell:hover { z-index: 10; transform: scale(1.05); box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
 .heatmap-cell.selected { border-color: #fff; z-index: 5; }
 
-/* === МОБИЛЬНАЯ ЛОГИКА (скрываем лишнее) === */
-.heatmap-cell.weekend { display: none; }
+/* === МОБИЛЬНАЯ ЛОГИКА === */
+/* ВЫХОДНЫЕ БОЛЬШЕ НЕ СКРЫВАЕМ */
 .heatmap-cell.spacer { display: none; }
-.heatmap-cell.hidden-mobile { display: none !important; } /* Скрывает недели ДО первой сделки */
+.heatmap-cell.hidden-mobile { display: none !important; }
+
+/* Чтобы неделя всегда была 7 клеток, но будущее не кликается */
+.heatmap-cell.disabled {
+  pointer-events: none;
+  opacity: 0.35;
+  cursor: default;
+}
 
 /* Content inside cell */
 .hm-day-label {
@@ -320,32 +335,36 @@ html, body, #root {
 
 /* === DESKTOP OVERRIDES (> 768px) === */
 @media (min-width: 769px) {
-  .heatmap-grid {
+  /* На ПК показываем месячную сетку, недельную прячем */
+  .heatmap-grid.monthly {
     display: grid;
-    gap: 2px;
-    /* Default Mobile: 7 columns (Mon-Sun) */
-    grid-template-columns: repeat(7, 1fr);
-    padding-bottom: 10px;
+    grid-template-columns: repeat(31, 1fr);
+    gap: 1px;
+  }
+  .heatmap-grid.weekly {
+    display: none;
   }
 
   .heatmap-cell {
-    height: 30px; 
+    height: 30px;
     min-width: 20px;
   }
-  
-  /* НА ПК ПОКАЗЫВАЕМ ВСЁ */
+
+  /* НА ПК: weekend/spacer как было */
   .heatmap-cell.weekend {
     display: flex;
     background-color: #161920;
   }
   .heatmap-cell.spacer {
-    display: none;
+    display: block;
     background: #131722;
     opacity: 0.3;
     pointer-events: none;
   }
-  .heatmap-cell.hidden-mobile { display: none !important; }
-  
+  .heatmap-cell.hidden-mobile {
+    display: flex !important;
+  }
+
   .hm-profit-val { font-size: 9px; }
 }
 
@@ -428,7 +447,7 @@ html, body, #root {
   }
 
   /* 2. Heatmap на мобильном */
-  .heatmap-grid {
+  .heatmap-grid.weekly {
     grid-template-columns: repeat(7, 1fr);
   }
   .heatmap-cell { 
