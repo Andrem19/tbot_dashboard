@@ -321,9 +321,11 @@ html, body, #root {
 /* === DESKTOP OVERRIDES (> 768px) === */
 @media (min-width: 769px) {
   .heatmap-grid {
-    /* Desktop: 31 columns for full calendar view */
-    grid-template-columns: repeat(31, 1fr); 
-    gap: 1px;
+    display: grid;
+    gap: 2px;
+    /* Default Mobile: 7 columns (Mon-Sun) */
+    grid-template-columns: repeat(7, 1fr);
+    padding-bottom: 10px;
   }
 
   .heatmap-cell {
@@ -337,14 +339,12 @@ html, body, #root {
     background-color: #161920;
   }
   .heatmap-cell.spacer {
-    display: block;
+    display: none;
     background: #131722;
     opacity: 0.3;
     pointer-events: none;
   }
-  .heatmap-cell.hidden-mobile {
-    display: flex !important; /* На ПК эти ячейки видны */
-  }
+  .heatmap-cell.hidden-mobile { display: none !important; }
   
   .hm-profit-val { font-size: 9px; }
 }
@@ -429,7 +429,7 @@ html, body, #root {
 
   /* 2. Heatmap на мобильном */
   .heatmap-grid {
-    grid-template-columns: repeat(5, 1fr); 
+    grid-template-columns: repeat(7, 1fr);
   }
   .heatmap-cell { 
     height: 45px; 
