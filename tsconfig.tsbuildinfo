@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/types.ts","./src/vite-env.d.ts","./src/components/Chart.tsx","./src/hooks/useBinanceKlines.ts","./src/services/binance.ts","./src/utils/intervals.ts"],"version":"5.8.3"}
