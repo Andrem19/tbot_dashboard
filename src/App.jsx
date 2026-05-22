@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ChartTabs from './components/ChartTabs.jsx';
+import CpsLedgerPanel from './components/CpsLedgerPanel.jsx';
+import CpsOverview from './components/CpsOverview.jsx';
 import ReportStrip from './components/ReportStrip.jsx';
 import HistoryHeatmap from './components/HistoryHeatmap.jsx';
 import { useFirebaseData } from './hooks';
+import { normalizeDashboardData } from './utils/cpsDashboard.js';
 import './App.css';
 
 /* === НАСТРОЙКИ ПО УМОЛЧАНИЮ === */
@@ -55,7 +58,7 @@ export default function App() {
   // 2. Сбрасываем таймер, когда приходят новые данные по позиции
   useEffect(() => {
     setSecondsAgo(0);
-  }, [dashb?.pos]); // Зависимость от объекта позиции
+  }, [dashb?.pos, dashb?.cps_ledger]);
 
   /* --- Обработчики формы --- */
   const onChange = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
@@ -70,22 +73,8 @@ export default function App() {
   }, [form]);
 
   /* --- Разбор данных из DB --- */
-  const chartPositions = useMemo(() => {
-    const p = dashb?.pos;
-    if (!p || !p.pos_exist) return []; 
-    return [{
-      key: 'CurrentPos',
-      visible: true,
-      baseCoin: p.symbol,
-      entryPx: p.open_price,
-      sl: p.sl_price,
-      tp: p.tp_price,
-      openTime: p.timestamp_open,
-      qty: p.qty,
-      pnl: p.current_pnl,
-      side: p.side
-    }];
-  }, [dashb]);
+  const dashboard = useMemo(() => normalizeDashboardData(dashb, settings.coin), [dashb, settings.coin]);
+  const chartPositions = dashboard.chartPositions;
 
   const positionsByCoin = useMemo(() => {
     const m = {};
@@ -97,14 +86,15 @@ export default function App() {
     return m;
   }, [chartPositions, settings.coin]);
 
-  const reportData = dashb?.report || null;
-  const historyData = dashb?.hist || [];
-  const currentPnl = dashb?.pos?.pos_exist ? dashb.pos.current_pnl : null;
+  const reportData = dashboard.report;
+  const historyData = dashboard.history;
+  const currentPnl = dashboard.isCps ? dashboard.overview?.currentPnl : (dashb?.pos?.pos_exist ? dashb.pos.current_pnl : null);
   const positionAge = useMemo(() => {
+    if (dashboard.isCps) return null;
     const pos = dashb?.pos;
     if (!pos || !pos.pos_exist) return null;
     return formatPositionAge(pos.timestamp_open, Date.now());
-  }, [dashb?.pos, secondsAgo]);
+  }, [dashboard.isCps, dashb?.pos, secondsAgo]);
 
   /* --- Состояние чарта --- */
   const [chartStatus, setChartStatus] = useState({
@@ -166,6 +156,7 @@ export default function App() {
       </form>
 
       <div className="main-content">
+        <CpsOverview overview={dashboard.overview} />
         <ChartTabs
           coins={[settings.coin]}
           number_candles={settings.number_candles}
@@ -177,6 +168,7 @@ export default function App() {
       </div>
 
       <ReportStrip report={reportData} />
+      <CpsLedgerPanel ledger={dashboard.ledger} executions={dashboard.executions} />
       <HistoryHeatmap history={historyData} />
 
       <div className="status-bar">

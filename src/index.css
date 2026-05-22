@@ -128,7 +128,8 @@ html, body, #root {
 .chart-tabs-root {
   display: flex;
   flex-direction: column;
-  height: 100%;            /* Растягиваем на всю высоту main-content */
+  flex: 1;                 /* Растягиваем на остаток после CPS overview */
+  height: auto;
   min-height: 0;           /* Страховка от переполнения */
 }
 
@@ -194,6 +195,208 @@ html, body, #root {
 }
 .report-key { color: var(--text-secondary); }
 .report-value { color: var(--text-primary); font-weight: 600; font-feature-settings: "tnum"; }
+
+/* === CPS Net Ledger === */
+.cps-overview {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #171b26;
+  border-bottom: 1px solid var(--border);
+}
+
+.cps-overview-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cps-strategy {
+  margin-top: 4px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.cps-pnl {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.positive { color: var(--green); }
+.negative { color: var(--red); }
+
+.cps-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(90px, 1fr));
+  gap: 8px;
+}
+
+.cps-kpi {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.03);
+}
+
+.cps-kpi span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cps-kpi strong {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cps-kpi.long strong { color: var(--green); }
+.cps-kpi.short strong { color: var(--red); }
+
+.cps-rule-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.cps-rule-strip span {
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.18);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cps-ledger-panel {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.4fr;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+.cps-ledger-section {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cps-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.cps-section-header h3 {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cps-section-header span,
+.cps-empty {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.cps-leg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 8px;
+}
+
+.cps-leg-grid.compact {
+  grid-template-columns: 1fr;
+}
+
+.cps-leg-card {
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.025);
+}
+
+.cps-leg-card.long { border-left: 3px solid var(--green); }
+.cps-leg-card.short { border-left: 3px solid var(--red); }
+.cps-leg-card.shadow { opacity: 0.68; }
+
+.cps-leg-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cps-leg-meta,
+.cps-execution-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 7px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.cps-leg-meta span,
+.cps-execution-row span {
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.2);
+}
+
+.cps-rule-label {
+  margin-top: 7px;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cps-execution-list {
+  display: grid;
+  gap: 6px;
+}
+
+.cps-execution-row {
+  margin-top: 0;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: rgba(255,255,255,0.02);
+}
 
 /* === Heatmap (Updated) === */
 .heatmap-container {
@@ -502,6 +705,13 @@ html, body, #root {
 
 /* === MOBILE FIXES (< 768px) === */
 @media (max-width: 768px) {
+  .cps-kpi-grid {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+  .cps-ledger-panel {
+    grid-template-columns: 1fr;
+    max-height: 45vh;
+  }
   .heatmap-header {
     flex-direction: column;
     align-items: stretch; 

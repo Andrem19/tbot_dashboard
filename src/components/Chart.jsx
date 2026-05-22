@@ -171,10 +171,10 @@ export default function Chart({ candles, positions = [], history = [] }) {
 
     positions.forEach(p => {
       if (!p.visible) return;
-      // Передаем названия обратно
-      addLine(p.entryPx, '#2962ff', 'Entry', LineStyle.Solid); 
-      addLine(p.sl, '#ef5350', 'SL');
-      addLine(p.tp, '#26a69a', 'TP');
+      const title = p.label ? `Entry ${p.label}` : 'Entry';
+      addLine(p.entryPx, p.side === 2 ? '#ff8f00' : '#2962ff', title, LineStyle.Solid);
+      addLine(p.sl, '#ef5350', p.label ? `SL ${p.label}` : 'SL');
+      addLine(p.tp, '#26a69a', p.label ? `TP ${p.label}` : 'TP');
     });
   }, [positions, candles]);
 

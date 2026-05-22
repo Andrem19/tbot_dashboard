@@ -2,9 +2,11 @@
   "name": "tbot_dashboard",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "homepage": "https://Andrem19.github.io/tbot_dashboard",
   "scripts": {
     "dev": "vite",
+    "test": "node --test src/utils/cpsDashboard.test.js",
     "build": "vite build",
     "preview": "vite preview",
     "predeploy": "npm run build",
