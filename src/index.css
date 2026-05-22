@@ -705,13 +705,93 @@ html, body, #root {
 
 /* === MOBILE FIXES (< 768px) === */
 @media (max-width: 768px) {
-  .cps-kpi-grid {
-    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  .app-container {
+    height: auto;
+    min-height: 100dvh;
+    max-height: none;
+    overflow-y: auto;
   }
+
+  .form-row {
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .form-row label {
+    flex: 1 1 90px;
+  }
+
+  .header-pnl {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .main-content {
+    flex: 0 0 auto;
+    height: 58dvh;
+    min-height: 360px;
+    overflow: hidden;
+  }
+
+  .chart-tabs-root,
+  .chart-wrapper,
+  .chart-container {
+    min-height: 0;
+  }
+
+  .cps-overview {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .cps-overview-main {
+    align-items: center;
+  }
+
+  .cps-strategy {
+    font-size: 10px;
+  }
+
+  .cps-pnl {
+    font-size: 15px;
+  }
+
+  .cps-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .cps-kpi {
+    padding: 5px 6px;
+  }
+
+  .cps-kpi span {
+    font-size: 8px;
+  }
+
+  .cps-kpi strong {
+    font-size: 11px;
+  }
+
+  .cps-rule-strip {
+    gap: 5px;
+    font-size: 9px;
+    max-height: 46px;
+    overflow-y: auto;
+  }
+
   .cps-ledger-panel {
     grid-template-columns: 1fr;
-    max-height: 45vh;
+    max-height: 24dvh;
+    padding: 8px 10px;
   }
+
+  .heatmap-container {
+    max-height: 28dvh;
+    padding: 10px;
+  }
+
   .heatmap-header {
     flex-direction: column;
     align-items: stretch; 
