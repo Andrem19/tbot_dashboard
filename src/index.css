@@ -358,6 +358,7 @@ html, body, #root {
 }
 
 .cps-leg-meta,
+.cps-leg-timing,
 .cps-execution-row {
   display: flex;
   flex-wrap: wrap;
@@ -369,10 +370,15 @@ html, body, #root {
 }
 
 .cps-leg-meta span,
+.cps-leg-timing span,
 .cps-execution-row span {
   padding: 2px 5px;
   border-radius: 3px;
   background: rgba(0,0,0,0.2);
+}
+
+.cps-leg-timing {
+  color: var(--text-primary);
 }
 
 .cps-rule-label {
