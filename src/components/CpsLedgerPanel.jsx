@@ -163,6 +163,7 @@ function Events({ rows }) {
 }
 
 function eventTone(row) {
+  if (row.event_type === 'signal_rejected' && row.reason === 'recovery_contract_validation_failed') return '';
   const text = `${row.status || ''} ${row.reason || ''} ${row.event_type || ''}`.toLowerCase();
   if (text.includes('fail') || text.includes('unsafe') || text.includes('mismatch') || text.includes('orphan')) return 'negative';
   if (text.includes('ok') || text.includes('executed') || text.includes('received')) return 'positive';

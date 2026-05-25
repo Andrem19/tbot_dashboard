@@ -99,6 +99,31 @@ test('uses contract strategy version and safe recovery statuses without warnings
   assert.deepEqual(out.warnings, []);
 });
 
+test('does not surface old rejected recovery event after successful reconciliation', () => {
+  const out = normalizeDashboardData({
+    schema_version: CPS_SCHEMA_VERSION,
+    pos: {},
+    cps_signal: {},
+    cps_contract: {
+      contract_version: 'ut3_cps_net_ledger_contract_v1',
+      strategy_version: 'ut3_cps_contract',
+      contract_hash: 'hash',
+    },
+    cps_reconciliation: { status: 'ok', unsafe_to_trade: false },
+    cps_events: [
+      { event_type: 'reconciliation_result', event_ms: 2000, status: 'recovery_ok' },
+      {
+        event_type: 'signal_rejected',
+        event_ms: 1000,
+        status: 'rejected',
+        reason: 'recovery_contract_validation_failed',
+      },
+    ],
+  });
+
+  assert.deepEqual(out.warnings, []);
+});
+
 test('surfaces CPS dashboard contract and signal warnings', () => {
   const out = normalizeDashboardData({
     schema_version: CPS_SCHEMA_VERSION,

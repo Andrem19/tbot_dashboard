@@ -91,7 +91,12 @@ function cpsWarnings({ dashb, pos, signal, contract, reconciliation, events }) {
   if (reconciliation.unsafe_to_trade) warnings.push(`reconciliation unsafe: ${reconciliation.status || 'unknown'}`);
   const signalMs = finiteNumber(signal.generated_ms || signal.updated_ms || pos.latest_signal_ms);
   if (signalMs > 0 && Date.now() - signalMs > 2 * 60 * 60 * 1000) warnings.push('stale signal');
-  const badEvent = events.find((event) => event.status && !OK_EVENT_STATUSES.has(event.status));
+  const latestOkReconciliationMs = latestOkReconciliationEventMs(events);
+  const badEvent = events.find((event) => {
+    if (!event.status || OK_EVENT_STATUSES.has(event.status)) return false;
+    if (event.event_ms && latestOkReconciliationMs && event.event_ms <= latestOkReconciliationMs) return false;
+    return true;
+  });
   if (badEvent) warnings.push(`${badEvent.event_type || 'event'}: ${badEvent.status}`);
   if (dashb?.schema_version !== CPS_SCHEMA_VERSION) warnings.push(`schema ${dashb?.schema_version || 'missing'}`);
   return warnings;
@@ -124,6 +129,12 @@ function parseDetails(value) {
 function latestEventStatus(events, type) {
   const event = events.find((item) => item.event_type === type);
   return event?.status || '';
+}
+
+function latestOkReconciliationEventMs(events) {
+  return events
+    .filter((item) => item.event_type === 'reconciliation_result' && OK_EVENT_STATUSES.has(item.status))
+    .reduce((latest, item) => Math.max(latest, finiteNumber(item.event_ms)), 0);
 }
 
 function legacyChartPositions(pos, fallbackCoin) {
