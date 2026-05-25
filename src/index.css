@@ -222,6 +222,40 @@ html, body, #root {
   word-break: break-word;
 }
 
+.cps-contract-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 5px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.cps-contract-line span,
+.cps-warning-strip span {
+  max-width: 100%;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.22);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cps-warning-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--red);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.cps-warning-strip span {
+  border: 1px solid rgba(239, 83, 80, 0.35);
+  background: rgba(239, 83, 80, 0.08);
+}
+
 .cps-pnl {
   font-family: var(--font-mono);
   font-size: 18px;
@@ -288,13 +322,13 @@ html, body, #root {
 .cps-ledger-panel {
   flex-shrink: 0;
   display: grid;
-  grid-template-columns: 2fr 1fr 1.4fr;
+  grid-template-columns: 1.7fr 0.9fr 1.25fr 1.35fr;
   gap: 10px;
   padding: 10px 16px;
   background: var(--bg-panel);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  max-height: 30vh;
+  max-height: 32vh;
   overflow-y: auto;
 }
 
@@ -359,7 +393,8 @@ html, body, #root {
 
 .cps-leg-meta,
 .cps-leg-timing,
-.cps-execution-row {
+.cps-execution-row,
+.cps-event-row {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
@@ -371,7 +406,8 @@ html, body, #root {
 
 .cps-leg-meta span,
 .cps-leg-timing span,
-.cps-execution-row span {
+.cps-execution-row span,
+.cps-event-row span {
   padding: 2px 5px;
   border-radius: 3px;
   background: rgba(0,0,0,0.2);
@@ -396,12 +432,32 @@ html, body, #root {
   gap: 6px;
 }
 
-.cps-execution-row {
+.cps-event-list {
+  display: grid;
+  gap: 6px;
+}
+
+.cps-execution-row,
+.cps-event-row {
   margin-top: 0;
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 5px;
   background: rgba(255,255,255,0.02);
+}
+
+.cps-event-row strong {
+  color: var(--text-primary);
+  font-size: 10px;
+}
+
+.cps-event-row.negative {
+  border-color: rgba(239, 83, 80, 0.42);
+  background: rgba(239, 83, 80, 0.06);
+}
+
+.cps-event-row.positive {
+  border-color: rgba(38, 166, 154, 0.32);
 }
 
 /* === Heatmap (Updated) === */
@@ -784,6 +840,14 @@ html, body, #root {
     gap: 5px;
     font-size: 9px;
     max-height: 46px;
+    overflow-y: auto;
+  }
+
+  .cps-contract-line,
+  .cps-warning-strip {
+    gap: 4px;
+    font-size: 9px;
+    max-height: 42px;
     overflow-y: auto;
   }
 

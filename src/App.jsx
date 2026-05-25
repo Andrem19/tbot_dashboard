@@ -58,7 +58,7 @@ export default function App() {
   // 2. Сбрасываем таймер, когда приходят новые данные по позиции
   useEffect(() => {
     setSecondsAgo(0);
-  }, [dashb?.pos, dashb?.cps_ledger]);
+  }, [dashb?.pos, dashb?.cps_ledger, dashb?.cps_signal, dashb?.cps_events]);
 
   /* --- Обработчики формы --- */
   const onChange = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
@@ -168,7 +168,7 @@ export default function App() {
       </div>
 
       <ReportStrip report={reportData} />
-      <CpsLedgerPanel ledger={dashboard.ledger} executions={dashboard.executions} />
+      <CpsLedgerPanel ledger={dashboard.ledger} executions={dashboard.executions} events={dashboard.events} />
       <HistoryHeatmap history={historyData} />
 
       <div className="status-bar">

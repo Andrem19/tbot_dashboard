@@ -37,6 +37,25 @@ test('normalizes CPS net-ledger Firebase state', () => {
       recently_closed: [{ symbol: 'BTCUSDT', profit: 2 }],
     },
     cps_executions: [{ id: 1, target_id: 'target', status: 'executed' }],
+    cps_reconciliation: {
+      status: 'ok',
+      unsafe_to_trade: false,
+      active_leg_count: 1,
+      target_signed_units: -1.25,
+    },
+    cps_events: [{
+      event_type: 'reconciliation_result',
+      event_ms: 1760000000000,
+      status: 'ok',
+      details_json: '{"active_legs":1,"target_units":-1.25}',
+    }],
+    cps_contract: {
+      contract_version: 'ut3_cps_net_ledger_contract_v1',
+      contract_hash: '927e906d7ff42ad696a82f11558dd6f33b8aeb849d244e7d3a7388fe8274da03',
+      snapshot_job_id: 'cps_20260522_141756_7b79c604',
+      execution_model: 'net_ledger',
+      exchange_position_model: 'single_net_position',
+    },
     cps_history: [{ symbol: 'BTCUSDT', timestamp_open: 1000, profit: 2 }],
   };
 
@@ -48,11 +67,40 @@ test('normalizes CPS net-ledger Firebase state', () => {
   assert.equal(out.overview.activeCount, 1);
   assert.equal(out.ledger.shadow.length, 1);
   assert.equal(out.executions.length, 1);
+  assert.equal(out.events.length, 1);
+  assert.equal(out.events[0].details.active_legs, 1);
+  assert.equal(out.overview.contractVersion, 'ut3_cps_net_ledger_contract_v1');
+  assert.equal(out.overview.reconciliationStatus, 'ok');
+  assert.equal(out.overview.reconciliation.active_leg_count, 1);
+  assert.deepEqual(out.warnings, []);
   assert.equal(out.history.length, 1);
   assert.equal(out.chartPositions.length, 1);
   assert.equal(out.chartPositions[0].side, 2);
   assert.equal(out.chartPositions[0].tp, 99);
   assert.equal(Number(out.chartPositions[0].sl.toFixed(4)), 100.3);
+});
+
+test('surfaces CPS dashboard contract and signal warnings', () => {
+  const out = normalizeDashboardData({
+    schema_version: CPS_SCHEMA_VERSION,
+    pos: { strategy_version: 'ut3_cps' },
+    cps_signal: {
+      signal: 0,
+      status: 'fail_closed',
+      generated_ms: Date.now() - 3 * 60 * 60 * 1000,
+    },
+    cps_reconciliation: { status: 'missing_exchange_position', unsafe_to_trade: true },
+    cps_ledger: {},
+    cps_events: [{ event_type: 'rebalance_failed', status: 'failed', reason: 'exchange_position_mismatch' }],
+  });
+
+  assert.equal(out.isCps, true);
+  assert.ok(out.warnings.includes('missing cps_contract'));
+  assert.ok(out.warnings.includes('missing contract_hash'));
+  assert.ok(out.warnings.includes('signal fail-closed'));
+  assert.ok(out.warnings.includes('stale signal'));
+  assert.ok(out.warnings.includes('reconciliation unsafe: missing_exchange_position'));
+  assert.ok(out.warnings.some((warning) => warning.includes('rebalance_failed')));
 });
 
 test('keeps legacy dashboard fallback readable', () => {
@@ -74,5 +122,6 @@ test('keeps legacy dashboard fallback readable', () => {
   assert.equal(out.chartPositions.length, 1);
   assert.equal(out.chartPositions[0].label, 'Net');
   assert.equal(out.history.length, 1);
+  assert.equal(out.events.length, 0);
   assert.deepEqual(out.report, { pnl: 3 });
 });

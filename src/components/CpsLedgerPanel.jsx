@@ -1,12 +1,13 @@
 import { formatSigned } from '../utils/cpsDashboard.js';
 
-export default function CpsLedgerPanel({ ledger, executions = [] }) {
+export default function CpsLedgerPanel({ ledger, executions = [], events = [] }) {
   if (!ledger) return null;
   return (
     <section className="cps-ledger-panel">
       <LedgerSection title="Active Virtual Legs" rows={ledger.active || []} empty="No active virtual legs" />
       <LedgerSection title="Shadow Legs" rows={ledger.shadow || []} empty="No shadow bootstrap legs" compact />
       <Executions rows={executions} />
+      <Events rows={events} />
     </section>
   );
 }
@@ -131,4 +132,51 @@ function Executions({ rows }) {
       )}
     </div>
   );
+}
+
+function Events({ rows }) {
+  return (
+    <div className="cps-ledger-section cps-events-section">
+      <div className="cps-section-header">
+        <h3>Recent CPS Events</h3>
+        <span>{rows.length}</span>
+      </div>
+      {rows.length === 0 ? (
+        <div className="cps-empty">No event records</div>
+      ) : (
+        <div className="cps-event-list">
+          {rows.slice(0, 12).map((row, idx) => (
+            <div key={`${row.id || row.event_ms || idx}-${row.event_type}`} className={`cps-event-row ${eventTone(row)}`}>
+              <span>{formatDateTime(toMs(row.event_ms))}</span>
+              <strong>{row.event_type || 'event'}</strong>
+              {row.status && <span>{row.status}</span>}
+              {row.reason && <span>{row.reason}</span>}
+              {row.strategy_version && <span>{short(row.strategy_version, 20)}</span>}
+              {row.payload_hash && <span>{short(row.payload_hash, 12)}</span>}
+              {eventDetails(row).map((part) => <span key={part}>{part}</span>)}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function eventTone(row) {
+  const text = `${row.status || ''} ${row.reason || ''} ${row.event_type || ''}`.toLowerCase();
+  if (text.includes('fail') || text.includes('unsafe') || text.includes('mismatch') || text.includes('orphan')) return 'negative';
+  if (text.includes('ok') || text.includes('executed') || text.includes('received')) return 'positive';
+  return '';
+}
+
+function eventDetails(row) {
+  const details = row.details || {};
+  return ['target_units', 'active_legs', 'closed_legs', 'shadow_legs']
+    .filter((key) => details[key] !== undefined && details[key] !== null)
+    .map((key) => `${key.replaceAll('_', ' ')} ${details[key]}`);
+}
+
+function short(value, size) {
+  const text = String(value || '');
+  return text.length > size ? `${text.slice(0, size)}...` : text;
 }

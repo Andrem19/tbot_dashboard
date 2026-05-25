@@ -11,11 +11,22 @@ export default function CpsOverview({ overview }) {
         <div>
           <div className="panel-title">CPS Net Ledger</div>
           <div className="cps-strategy">{overview.strategyVersion || 'unknown strategy'}</div>
+          <div className="cps-contract-line">
+            <span>{overview.contractVersion || 'no contract'}</span>
+            <span>{overview.contractHash ? overview.contractHash.slice(0, 12) : 'no hash'}</span>
+            {overview.snapshotJobId && <span>{overview.snapshotJobId}</span>}
+          </div>
         </div>
         <div className={`cps-pnl ${pnl >= 0 ? 'positive' : 'negative'}`}>
           {pnl > 0 ? '+' : ''}{pnl.toFixed(4)}
         </div>
       </div>
+
+      {overview.warnings?.length > 0 && (
+        <div className="cps-warning-strip">
+          {overview.warnings.map((warning) => <span key={warning}>{warning}</span>)}
+        </div>
+      )}
 
       <div className="cps-kpi-grid">
         <Kpi label="target units" value={formatSigned(overview.targetSignedUnits, 4)} tone={overview.targetDirection} />
@@ -28,6 +39,9 @@ export default function CpsOverview({ overview }) {
 
       <div className="cps-rule-strip">
         <span>signal: {overview.latestSignal} {overview.latestDirection || ''}</span>
+        <span>signal state: {overview.signalStatus || 'ok'}</span>
+        <span>recon: {overview.reconciliationStatus || 'n/a'}</span>
+        <span>model: {overview.executionModel || 'n/a'} / {overview.exchangePositionModel || 'n/a'}</span>
         <span>source: {rule.source || 'N/A'}</span>
         <span>horizon: {rule.base_horizon_minutes || 'N/A'}m</span>
         <span>{rule.label || 'no selected rule'}</span>

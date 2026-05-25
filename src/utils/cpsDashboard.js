@@ -11,15 +11,21 @@ export function normalizeDashboardData(dashb, fallbackCoin = 'BTCUSDT') {
       overview: null,
       ledger: null,
       executions: [],
+      events: [],
+      warnings: [],
     };
   }
 
   const ledger = dashb?.cps_ledger || {};
   const pos = dashb?.pos || {};
   const signal = dashb?.cps_signal || {};
+  const contract = dashb?.cps_contract || {};
+  const reconciliation = dashb?.cps_reconciliation || {};
   const active = asArray(ledger.active);
   const shadow = asArray(ledger.shadow);
   const closed = asArray(ledger.recently_closed);
+  const events = asArray(dashb?.cps_events).map(normalizeEvent);
+  const warnings = cpsWarnings({ dashb, pos, signal, contract, reconciliation, events });
 
   return {
     isCps: true,
@@ -29,6 +35,11 @@ export function normalizeDashboardData(dashb, fallbackCoin = 'BTCUSDT') {
     overview: {
       schemaVersion: dashb?.schema_version,
       strategyVersion: pos.strategy_version || signal.version || '',
+      contractVersion: contract.contract_version || '',
+      contractHash: contract.contract_hash || '',
+      snapshotJobId: contract.snapshot_job_id || '',
+      executionModel: contract.execution_model || '',
+      exchangePositionModel: contract.exchange_position_model || '',
       symbol: pos.symbol || fallbackCoin,
       currentPnl: finiteNumber(pos.current_pnl),
       currentPrice: finiteNumber(pos.current_price),
@@ -44,6 +55,11 @@ export function normalizeDashboardData(dashb, fallbackCoin = 'BTCUSDT') {
       latestDirection: pos.latest_direction || signal.direction || '',
       selectedRule: pos.selected_rule || signal.selected_rule || {},
       features: signal.features || {},
+      signalStatus: signal.status || signal.diagnostics?.status || '',
+      signalUpdatedMs: finiteNumber(signal.generated_ms || signal.updated_ms || pos.latest_signal_ms),
+      reconciliationStatus: reconciliation.status || latestEventStatus(events, 'reconciliation_result'),
+      reconciliation,
+      warnings,
     },
     ledger: {
       active,
@@ -52,7 +68,53 @@ export function normalizeDashboardData(dashb, fallbackCoin = 'BTCUSDT') {
       summary: ledger.summary || {},
     },
     executions: asArray(dashb?.cps_executions),
+    events,
+    warnings,
   };
+}
+
+function cpsWarnings({ dashb, pos, signal, contract, reconciliation, events }) {
+  const warnings = [];
+  if (!contract.contract_version) warnings.push('missing cps_contract');
+  if (!contract.contract_hash) warnings.push('missing contract_hash');
+  if (!pos.strategy_version && !signal.version) warnings.push('missing strategy_version');
+  if (signal.fail_closed || signal.status === 'fail_closed') warnings.push('signal fail-closed');
+  if (reconciliation.unsafe_to_trade) warnings.push(`reconciliation unsafe: ${reconciliation.status || 'unknown'}`);
+  const signalMs = finiteNumber(signal.generated_ms || signal.updated_ms || pos.latest_signal_ms);
+  if (signalMs > 0 && Date.now() - signalMs > 2 * 60 * 60 * 1000) warnings.push('stale signal');
+  const badEvent = events.find((event) => event.status && !['ok', 'executed', 'closed', 'shadowed', 'received'].includes(event.status));
+  if (badEvent) warnings.push(`${badEvent.event_type || 'event'}: ${badEvent.status}`);
+  if (dashb?.schema_version !== CPS_SCHEMA_VERSION) warnings.push(`schema ${dashb?.schema_version || 'missing'}`);
+  return warnings;
+}
+
+function normalizeEvent(event) {
+  const details = parseDetails(event.details || event.details_json || {});
+  return {
+    ...event,
+    event_ms: finiteNumber(event.event_ms || event.created_ms || event.timestamp_ms),
+    event_type: event.event_type || event.type || 'event',
+    status: event.status || details.status || '',
+    reason: event.reason || details.reason || '',
+    details,
+  };
+}
+
+function parseDetails(value) {
+  if (!value) return {};
+  if (typeof value === 'object') return value;
+  if (typeof value !== 'string') return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return { raw: value };
+  }
+}
+
+function latestEventStatus(events, type) {
+  const event = events.find((item) => item.event_type === type);
+  return event?.status || '';
 }
 
 function legacyChartPositions(pos, fallbackCoin) {
