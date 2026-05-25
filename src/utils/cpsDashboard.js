@@ -1,4 +1,13 @@
 export const CPS_SCHEMA_VERSION = 'cps_net_ledger_v1';
+const OK_EVENT_STATUSES = new Set([
+  'ok',
+  'executed',
+  'closed',
+  'shadowed',
+  'received',
+  'recovery_ok',
+  'minor_drift',
+]);
 
 export function normalizeDashboardData(dashb, fallbackCoin = 'BTCUSDT') {
   const isCps = dashb?.schema_version === CPS_SCHEMA_VERSION;
@@ -34,7 +43,7 @@ export function normalizeDashboardData(dashb, fallbackCoin = 'BTCUSDT') {
     chartPositions: active.map((leg) => cpsLegChartPosition(leg, fallbackCoin)),
     overview: {
       schemaVersion: dashb?.schema_version,
-      strategyVersion: pos.strategy_version || signal.version || '',
+      strategyVersion: pos.strategy_version || signal.version || contract.strategy_version || '',
       contractVersion: contract.contract_version || '',
       contractHash: contract.contract_hash || '',
       snapshotJobId: contract.snapshot_job_id || '',
@@ -77,12 +86,12 @@ function cpsWarnings({ dashb, pos, signal, contract, reconciliation, events }) {
   const warnings = [];
   if (!contract.contract_version) warnings.push('missing cps_contract');
   if (!contract.contract_hash) warnings.push('missing contract_hash');
-  if (!pos.strategy_version && !signal.version) warnings.push('missing strategy_version');
+  if (!pos.strategy_version && !signal.version && !contract.strategy_version) warnings.push('missing strategy_version');
   if (signal.fail_closed || signal.status === 'fail_closed') warnings.push('signal fail-closed');
   if (reconciliation.unsafe_to_trade) warnings.push(`reconciliation unsafe: ${reconciliation.status || 'unknown'}`);
   const signalMs = finiteNumber(signal.generated_ms || signal.updated_ms || pos.latest_signal_ms);
   if (signalMs > 0 && Date.now() - signalMs > 2 * 60 * 60 * 1000) warnings.push('stale signal');
-  const badEvent = events.find((event) => event.status && !['ok', 'executed', 'closed', 'shadowed', 'received'].includes(event.status));
+  const badEvent = events.find((event) => event.status && !OK_EVENT_STATUSES.has(event.status));
   if (badEvent) warnings.push(`${badEvent.event_type || 'event'}: ${badEvent.status}`);
   if (dashb?.schema_version !== CPS_SCHEMA_VERSION) warnings.push(`schema ${dashb?.schema_version || 'missing'}`);
   return warnings;

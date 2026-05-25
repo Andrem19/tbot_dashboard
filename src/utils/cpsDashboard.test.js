@@ -51,6 +51,7 @@ test('normalizes CPS net-ledger Firebase state', () => {
     }],
     cps_contract: {
       contract_version: 'ut3_cps_net_ledger_contract_v1',
+      strategy_version: 'ut3_cps',
       contract_hash: '927e906d7ff42ad696a82f11558dd6f33b8aeb849d244e7d3a7388fe8274da03',
       snapshot_job_id: 'cps_20260522_141756_7b79c604',
       execution_model: 'net_ledger',
@@ -78,6 +79,24 @@ test('normalizes CPS net-ledger Firebase state', () => {
   assert.equal(out.chartPositions[0].side, 2);
   assert.equal(out.chartPositions[0].tp, 99);
   assert.equal(Number(out.chartPositions[0].sl.toFixed(4)), 100.3);
+});
+
+test('uses contract strategy version and safe recovery statuses without warnings', () => {
+  const out = normalizeDashboardData({
+    schema_version: CPS_SCHEMA_VERSION,
+    pos: {},
+    cps_signal: {},
+    cps_contract: {
+      contract_version: 'ut3_cps_net_ledger_contract_v1',
+      strategy_version: 'ut3_cps_contract',
+      contract_hash: 'hash',
+    },
+    cps_reconciliation: { status: 'ok', unsafe_to_trade: false },
+    cps_events: [{ event_type: 'reconciliation_result', status: 'recovery_ok' }],
+  });
+
+  assert.equal(out.overview.strategyVersion, 'ut3_cps_contract');
+  assert.deepEqual(out.warnings, []);
 });
 
 test('surfaces CPS dashboard contract and signal warnings', () => {
