@@ -33,6 +33,8 @@ export default function CpsOverview({ overview }) {
         <Kpi label="actual qty" value={formatSigned(overview.actualSignedQty, 6)} />
         <Kpi label="delta qty" value={formatSigned(overview.deltaSignedQty, 6)} />
         <Kpi label="active legs" value={overview.activeCount} />
+        <Kpi label="max legs" value={overview.maxActiveLegs || 'n/a'} />
+        <Kpi label="entries/hour" value={overview.maxEntriesPerHour || 'n/a'} />
         <Kpi label="shadow legs" value={overview.shadowCount} />
         <Kpi label="unit amount" value={`${Number(overview.amountPerUnit || 0).toFixed(2)} USDT`} />
       </div>
