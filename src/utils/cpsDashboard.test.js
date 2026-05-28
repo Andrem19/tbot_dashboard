@@ -60,6 +60,13 @@ test('normalizes CPS net-ledger Firebase state', () => {
       max_entries_per_hour: 1,
       max_effective_size: 1,
     },
+    strategy_runtime_state: {
+      active_strategy_id: 'ut5_cps_20260527_103357_450dcfa8',
+      active_contract_hash: 'cd6800b2cf7a26d70882690582f122388cd50ea03eef631d2d26793635e2373a',
+      migrated_at_ms: 1760000000000,
+      trading_enabled: true,
+      status: 'ready',
+    },
     cps_history: [{ symbol: 'BTCUSDT', timestamp_open: 1000, profit: 2 }],
   };
 
@@ -79,12 +86,37 @@ test('normalizes CPS net-ledger Firebase state', () => {
   assert.equal(out.overview.maxEffectiveSize, 1);
   assert.equal(out.overview.reconciliationStatus, 'ok');
   assert.equal(out.overview.reconciliation.active_leg_count, 1);
+  assert.equal(out.overview.runtimeState.status, 'ready');
+  assert.equal(out.overview.runtimeState.trading_enabled, true);
   assert.deepEqual(out.warnings, []);
   assert.equal(out.history.length, 1);
   assert.equal(out.chartPositions.length, 1);
   assert.equal(out.chartPositions[0].side, 2);
   assert.equal(out.chartPositions[0].tp, 99);
   assert.equal(Number(out.chartPositions[0].sl.toFixed(4)), 100.3);
+});
+
+test('surfaces strategy runtime migration warnings', () => {
+  const out = normalizeDashboardData({
+    schema_version: CPS_SCHEMA_VERSION,
+    pos: { strategy_version: 'ut5_cps_20260527_103357_450dcfa8' },
+    cps_signal: {},
+    cps_contract: {
+      contract_version: 'ut5_cps_net_ledger_contract_v1',
+      strategy_version: 'ut5_cps_20260527_103357_450dcfa8',
+      contract_hash: 'hash',
+    },
+    strategy_runtime_state: {
+      status: 'blocked',
+      trading_enabled: false,
+      notes: 'strategy_contract_changed_requires_explicit_db_migration',
+    },
+    cps_reconciliation: { status: 'ok', unsafe_to_trade: false },
+  });
+
+  assert.ok(out.warnings.includes('strategy runtime blocked'));
+  assert.ok(out.warnings.includes('strategy trading disabled'));
+  assert.equal(out.overview.runtimeState.notes, 'strategy_contract_changed_requires_explicit_db_migration');
 });
 
 test('uses contract strategy version and safe recovery statuses without warnings', () => {

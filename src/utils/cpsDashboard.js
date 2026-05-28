@@ -29,6 +29,7 @@ export function normalizeDashboardData(dashb, fallbackCoin = 'BTCUSDT') {
   const pos = dashb?.pos || {};
   const signal = dashb?.cps_signal || {};
   const contract = dashb?.cps_contract || {};
+  const runtimeState = dashb?.strategy_runtime_state || {};
   const reconciliation = dashb?.cps_reconciliation || {};
   const active = asArray(ledger.active);
   const shadow = asArray(ledger.shadow);
@@ -71,6 +72,7 @@ export function normalizeDashboardData(dashb, fallbackCoin = 'BTCUSDT') {
       signalUpdatedMs: finiteNumber(signal.generated_ms || signal.updated_ms || pos.latest_signal_ms),
       reconciliationStatus: reconciliation.status || latestEventStatus(events, 'reconciliation_result'),
       reconciliation,
+      runtimeState,
       warnings,
     },
     ledger: {
@@ -87,9 +89,12 @@ export function normalizeDashboardData(dashb, fallbackCoin = 'BTCUSDT') {
 
 function cpsWarnings({ dashb, pos, signal, contract, reconciliation, events }) {
   const warnings = [];
+  const runtimeState = dashb?.strategy_runtime_state || {};
   if (!contract.contract_version) warnings.push('missing cps_contract');
   if (!contract.contract_hash) warnings.push('missing contract_hash');
   if (!pos.strategy_version && !signal.version && !contract.strategy_version) warnings.push('missing strategy_version');
+  if (runtimeState.status && runtimeState.status !== 'ready') warnings.push(`strategy runtime ${runtimeState.status}`);
+  if (runtimeState.trading_enabled === false) warnings.push('strategy trading disabled');
   if (signal.fail_closed || signal.status === 'fail_closed') warnings.push('signal fail-closed');
   if (reconciliation.unsafe_to_trade) warnings.push(`reconciliation unsafe: ${reconciliation.status || 'unknown'}`);
   const signalMs = finiteNumber(signal.generated_ms || signal.updated_ms || pos.latest_signal_ms);

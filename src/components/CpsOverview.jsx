@@ -3,6 +3,7 @@ import { formatSigned } from '../utils/cpsDashboard.js';
 export default function CpsOverview({ overview }) {
   if (!overview) return null;
   const rule = overview.selectedRule || {};
+  const runtime = overview.runtimeState || {};
   const pnl = Number(overview.currentPnl || 0);
 
   return (
@@ -42,6 +43,7 @@ export default function CpsOverview({ overview }) {
       <div className="cps-rule-strip">
         <span>signal: {overview.latestSignal} {overview.latestDirection || ''}</span>
         <span>signal state: {overview.signalStatus || 'ok'}</span>
+        <span>runtime: {runtime.status || 'unknown'}</span>
         <span>recon: {overview.reconciliationStatus || 'n/a'}</span>
         <span>model: {overview.executionModel || 'n/a'} / {overview.exchangePositionModel || 'n/a'}</span>
         <span>source: {rule.source || 'N/A'}</span>
