@@ -7,7 +7,7 @@ test('normalizes CPS net-ledger Firebase state', () => {
   const data = {
     schema_version: CPS_SCHEMA_VERSION,
     pos: {
-      strategy_version: 'ut5_cps_20260527_103357_450dcfa8',
+      strategy_version: 'ut8_cps_20260531_181254_2a4d754b',
       symbol: 'BTCUSDT',
       current_pnl: 12.5,
       current_price: 100,
@@ -50,10 +50,10 @@ test('normalizes CPS net-ledger Firebase state', () => {
       details_json: '{"active_legs":1,"target_units":-1.25}',
     }],
     cps_contract: {
-      contract_version: 'ut5_cps_net_ledger_contract_v1',
-      strategy_version: 'ut5_cps_20260527_103357_450dcfa8',
+      contract_version: 'ut8_cps_net_ledger_contract_v1',
+      strategy_version: 'ut8_cps_20260531_181254_2a4d754b',
       contract_hash: 'cd6800b2cf7a26d70882690582f122388cd50ea03eef631d2d26793635e2373a',
-      snapshot_job_id: 'cps_20260527_103357_450dcfa8',
+      snapshot_job_id: 'cps_20260531_181254_2a4d754b',
       execution_model: 'net_ledger',
       exchange_position_model: 'single_net_position',
       max_active_legs: 2,
@@ -61,7 +61,7 @@ test('normalizes CPS net-ledger Firebase state', () => {
       max_effective_size: 1,
     },
     strategy_runtime_state: {
-      active_strategy_id: 'ut5_cps_20260527_103357_450dcfa8',
+      active_strategy_id: 'ut8_cps_20260531_181254_2a4d754b',
       active_contract_hash: 'cd6800b2cf7a26d70882690582f122388cd50ea03eef631d2d26793635e2373a',
       migrated_at_ms: 1760000000000,
       trading_enabled: true,
@@ -73,14 +73,14 @@ test('normalizes CPS net-ledger Firebase state', () => {
   const out = normalizeDashboardData(data, 'ETHUSDT');
 
   assert.equal(out.isCps, true);
-  assert.equal(out.overview.strategyVersion, 'ut5_cps_20260527_103357_450dcfa8');
+  assert.equal(out.overview.strategyVersion, 'ut8_cps_20260531_181254_2a4d754b');
   assert.equal(out.overview.targetDirection, 'short');
   assert.equal(out.overview.activeCount, 1);
   assert.equal(out.ledger.shadow.length, 1);
   assert.equal(out.executions.length, 1);
   assert.equal(out.events.length, 1);
   assert.equal(out.events[0].details.active_legs, 1);
-  assert.equal(out.overview.contractVersion, 'ut5_cps_net_ledger_contract_v1');
+  assert.equal(out.overview.contractVersion, 'ut8_cps_net_ledger_contract_v1');
   assert.equal(out.overview.maxActiveLegs, 2);
   assert.equal(out.overview.maxEntriesPerHour, 1);
   assert.equal(out.overview.maxEffectiveSize, 1);
@@ -99,11 +99,11 @@ test('normalizes CPS net-ledger Firebase state', () => {
 test('surfaces strategy runtime migration warnings', () => {
   const out = normalizeDashboardData({
     schema_version: CPS_SCHEMA_VERSION,
-    pos: { strategy_version: 'ut5_cps_20260527_103357_450dcfa8' },
+    pos: { strategy_version: 'ut8_cps_20260531_181254_2a4d754b' },
     cps_signal: {},
     cps_contract: {
-      contract_version: 'ut5_cps_net_ledger_contract_v1',
-      strategy_version: 'ut5_cps_20260527_103357_450dcfa8',
+      contract_version: 'ut8_cps_net_ledger_contract_v1',
+      strategy_version: 'ut8_cps_20260531_181254_2a4d754b',
       contract_hash: 'hash',
     },
     strategy_runtime_state: {
@@ -125,15 +125,15 @@ test('uses contract strategy version and safe recovery statuses without warnings
     pos: {},
     cps_signal: {},
     cps_contract: {
-      contract_version: 'ut5_cps_net_ledger_contract_v1',
-      strategy_version: 'ut5_cps_contract',
+      contract_version: 'ut8_cps_net_ledger_contract_v1',
+      strategy_version: 'ut8_cps_contract',
       contract_hash: 'hash',
     },
     cps_reconciliation: { status: 'ok', unsafe_to_trade: false },
     cps_events: [{ event_type: 'reconciliation_result', status: 'recovery_ok' }],
   });
 
-  assert.equal(out.overview.strategyVersion, 'ut5_cps_contract');
+  assert.equal(out.overview.strategyVersion, 'ut8_cps_contract');
   assert.deepEqual(out.warnings, []);
 });
 
@@ -143,8 +143,8 @@ test('does not surface old rejected recovery event after successful reconciliati
     pos: {},
     cps_signal: {},
     cps_contract: {
-      contract_version: 'ut5_cps_net_ledger_contract_v1',
-      strategy_version: 'ut5_cps_contract',
+      contract_version: 'ut8_cps_net_ledger_contract_v1',
+      strategy_version: 'ut8_cps_contract',
       contract_hash: 'hash',
     },
     cps_reconciliation: { status: 'ok', unsafe_to_trade: false },
@@ -165,7 +165,7 @@ test('does not surface old rejected recovery event after successful reconciliati
 test('surfaces CPS dashboard contract and signal warnings', () => {
   const out = normalizeDashboardData({
     schema_version: CPS_SCHEMA_VERSION,
-    pos: { strategy_version: 'ut5_cps_20260527_103357_450dcfa8' },
+    pos: { strategy_version: 'ut8_cps_20260531_181254_2a4d754b' },
     cps_signal: {
       signal: 0,
       status: 'fail_closed',
